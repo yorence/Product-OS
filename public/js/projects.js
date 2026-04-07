@@ -10,10 +10,16 @@ function populateProjectsSidebar() {
     return;
   }
 
-  container.innerHTML = STATE.topics.map(t =>
+  // Show manual projects first, then AI-generated
+  const manual = STATE.topics.filter(t => t._manual);
+  const ai = STATE.topics.filter(t => !t._manual);
+  const all = [...manual, ...ai];
+
+  container.innerHTML = all.map(t =>
     `<button onclick="showView('project-${t.id}')" data-view="project-${t.id}">
       <span style="display:inline-block;width:8px;height:8px;background:${t.color};flex-shrink:0"></span>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.name)}</span>
+      ${t._manual ? '<span style="font-family:var(--fd);font-size:8px;font-weight:700;letter-spacing:.06em;color:rgba(255,255,255,.3);margin-left:auto;flex-shrink:0">MANUAL</span>' : ''}
     </button>`
   ).join('');
 }

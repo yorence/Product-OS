@@ -76,7 +76,10 @@
     </button>
 
     <div id="projectsNavSection">
-      <div class="nav-section" style="margin-top:.8rem">Projects</div>
+      <div class="nav-section" style="margin-top:.8rem;display:flex;align-items:center;justify-content:space-between">
+        Projects
+        <button onclick="openCreateProjectWizard()" style="background:var(--green);color:var(--blue);border:none;cursor:pointer;font-family:var(--fd);font-weight:800;font-size:13px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Create Project">+</button>
+      </div>
       <div id="projectsNavItems">
         <button onclick="showView('topics')" style="color:var(--green);font-size:.65rem;letter-spacing:.08em">
           <span class="icon">&#9889;</span> Unlock with AI &rarr;
@@ -181,6 +184,7 @@
 <script src="js/policies.js"></script>
 <script src="js/projects.js"></script>
 <script src="js/views.js"></script>
+<script src="js/wizard.js"></script>
 <script src="js/history.js"></script>
 <script src="js/pipeline.js"></script>
 <script src="js/graph.js"></script>
