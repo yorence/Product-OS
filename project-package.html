@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
 <script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
 <style>
   :root {
@@ -243,6 +242,44 @@
   .proj-artifact li { margin:.4rem 0; padding:.5rem .7rem .5rem 1rem; background:var(--bg); border-left:3px solid var(--green); font-size:15px; line-height:1.55; }
   .proj-artifact li strong { color:var(--blue); }
   .proj-artifact pre { margin:1rem 0; }
+
+  /* ── Email Cards ── */
+  .email-card { background:white; border:1px solid var(--border); margin:.8rem 0; box-shadow:var(--sh-sm); overflow:hidden; }
+  .email-card-header { padding:12px 16px; background:var(--bg); border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:12px; }
+  .email-card-avatar { width:36px; height:36px; background:var(--blue); color:white; display:flex; align-items:center; justify-content:center; font-family:var(--fd); font-weight:800; font-size:14px; flex-shrink:0; }
+  .email-card-meta { flex:1; min-width:0; }
+  .email-card-to { font-family:var(--fd); font-size:13px; font-weight:700; color:var(--blue); }
+  .email-card-subject { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-light); margin-top:2px; }
+  .email-card-body { padding:14px 16px; font-size:15px; line-height:1.65; color:var(--text); }
+  .email-card-body p { margin:.4rem 0; }
+  .email-card-footer { padding:8px 16px; border-top:1px solid var(--gray-10); display:flex; align-items:center; gap:8px; }
+  .email-card-cite { font-family:var(--fd); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--green-text); text-decoration:none; display:inline-flex; align-items:center; gap:4px; }
+  .email-card-cite:hover { color:var(--blue); }
+
+  /* ── Conversation Bubbles ── */
+  .convo-card { margin:.8rem 0; }
+  .convo-header { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-light); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .convo-header .convo-person { color:var(--blue); }
+  .convo-bubble { background:var(--blue); color:white; padding:12px 16px; font-size:15px; line-height:1.6; margin-left:24px; position:relative; max-width:85%; }
+  .convo-bubble::before { content:''; position:absolute; top:12px; left:-8px; border:6px solid transparent; border-right-color:var(--blue); border-left:0; }
+  .convo-bubble p { margin:.3rem 0; }
+  .convo-bubble strong { color:var(--green); }
+  .convo-context { font-size:13px; color:var(--text-muted); margin-top:6px; margin-left:24px; font-style:italic; }
+  .convo-cite { margin-left:24px; margin-top:4px; }
+
+  /* ── Action Item Cards ── */
+  .action-card { display:flex; gap:12px; padding:12px 16px; background:white; border:1px solid var(--border); margin:.5rem 0; box-shadow:var(--sh-sm); align-items:flex-start; }
+  .action-check { width:20px; height:20px; border:2px solid var(--green); flex-shrink:0; margin-top:2px; }
+  .action-content { flex:1; }
+  .action-owner { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); margin-bottom:2px; }
+  .action-desc { font-size:15px; line-height:1.55; color:var(--text); }
+  .action-unblocks { font-size:13px; color:var(--text-light); margin-top:4px; }
+  .action-cite { margin-top:4px; }
+
+  /* ── Citation Links ── */
+  .cite-link { font-family:var(--fd); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--green-text); text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:var(--green-10); border:1px solid var(--green-40); transition:all var(--fast); }
+  .cite-link:hover { background:var(--green-20); color:var(--blue); }
+  .cite-link svg { width:12px; height:12px; }
 
   /* ── Mermaid Diagrams ── */
   .mermaid-container { background:white; border:1px solid var(--border); padding:1.5rem; margin:1rem 0; overflow-x:auto; box-shadow:var(--sh-sm); }
@@ -1002,7 +1039,7 @@ function renderProjectPage(topicId) {
 
   const artifactContent = artifactTabs.map(a => {
     const content = hasDocs && docs[a]
-      ? `<div class="proj-artifact">${simpleMarkdown(docs[a])}</div>`
+      ? (a === 'prep' ? renderPrepArtifact(docs[a]) : `<div class="proj-artifact">${simpleMarkdown(docs[a])}</div>`)
       : `<div class="proj-gen-banner">
           <h4>${artifactLabels[a]}</h4>
           <p>Generate AI-powered ${artifactLabels[a].toLowerCase()} for this initiative using meeting context.</p>
@@ -1082,9 +1119,15 @@ async function generateProjectDocs(topicId) {
   if (!t) return;
   if (!STATE.perplexityKey) { alert('Perplexity API key not set. Go to Topics Index to enter it.'); return; }
 
-  // Gather transcript context for this topic
+  // Gather transcript context with Fathom share URLs for citation
   const meetingContext = t.segments.map(s => {
-    return `[Meeting: "${s.meetingTitle}" | ${s.startTime}–${s.endTime}]\n${s.lines ? s.lines.map(l => (l.speaker?.display_name||'') + ': ' + l.text).join('\n') : s.text}`;
+    const m = STATE.meetings.find(x => x.recording_id === s.meetingId);
+    const shareUrl = m?.share_url || '';
+    // Convert timestamp HH:MM:SS to seconds for Fathom deep link
+    const tsParts = (s.startTime||'0:0:0').split(':').map(Number);
+    const tsSec = (tsParts[0]||0)*3600 + (tsParts[1]||0)*60 + (tsParts[2]||0);
+    const citeUrl = shareUrl ? shareUrl + '?timestamp=' + tsSec : '';
+    return `[Meeting: "${s.meetingTitle}" | ${s.startTime}–${s.endTime} | Video: ${citeUrl}]\n${s.lines ? s.lines.map(l => (l.speaker?.display_name||'') + ': ' + l.text).join('\n') : s.text}`;
   }).join('\n\n---\n\n');
 
   // Also gather brief context from OTHER themes so the prep notes are holistic
@@ -1120,14 +1163,27 @@ ${meetingContext}
 
 Generate these 6 artifacts. Use markdown formatting. Be specific to what was actually discussed — do not invent details not present in the transcripts.
 
-ARTIFACT 1 — "prep" (Meeting Prep Notes):
-This is for the product manager to prepare for their next meeting on this initiative. Include ALL of the following sections:
-- "## Emails to Send" — specific emails that need to be drafted and sent. For each: who it goes to, the subject/purpose, and what information or ask it should contain. Example: "Email Melissa Caban requesting conflict check sandbox screenshots and matter-party field structure comparison."
-- "## Conversations to Have" — informal 1:1 or small-group conversations needed before the next meeting. Who to talk to, what to ask or align on, and why it can't wait for the meeting.
-- "## Hard Action Items" — concrete deliverables or tasks that must be completed. For each: owner (by name), what exactly needs to be done, and what it unblocks. Format as a checklist.
-- "## Discussion Topics for Next Meeting" — questions that need answers, decisions that need to be made, blockers to resolve, and any cross-initiative dependencies with the other active themes listed above.
-- "## Suggested Attendees" — who should be in the next meeting based on the open items, and why each person is needed.
-Be extremely specific and actionable. Reference real people by name, real systems, and real decisions from the transcripts. Do not be vague.
+ARTIFACT 1 — "prep" (Meeting Prep — MUST BE STRUCTURED JSON, not markdown):
+The prep value must be a JSON object (not a string) with this exact structure:
+{
+  "emails": [
+    { "to": "Person Name", "subject": "Clear subject line", "body": "The full email draft body text. Be specific. Reference what was discussed.", "video_url": "the Fathom video URL with timestamp from the transcript context above, or empty string" }
+  ],
+  "conversations": [
+    { "with": "Person Name", "topic": "What to discuss", "message": "Write the actual opening message as if you were sending it on Slack or Teams. Make it natural and conversational.", "why": "Why this conversation needs to happen before the meeting", "video_url": "" }
+  ],
+  "action_items": [
+    { "owner": "Person Name", "task": "Specific deliverable description", "unblocks": "What this enables or unblocks", "video_url": "" }
+  ],
+  "discussion_topics": [
+    { "topic": "Topic or question", "context": "Why this needs to be decided and any relevant background", "video_url": "" }
+  ],
+  "suggested_attendees": [
+    { "name": "Person Name", "reason": "Why they need to be in the meeting" }
+  ]
+}
+IMPORTANT: For video_url fields, use the Fathom Video URLs provided in the transcript context above (they look like https://fathom.video/share/xxx?timestamp=123). Pick the URL closest to where that topic was discussed. Leave empty string if no relevant link.
+Be extremely specific. Use real names, real systems, real decisions from the transcripts.
 
 ARTIFACTS 2-6 — Standard project docs (brief, roadmap, security, pipeline, process).
 
@@ -1161,7 +1217,7 @@ graph LR
 
 RESPOND WITH VALID JSON ONLY (no markdown fences around the JSON itself):
 {
-  "prep": "## Action Items Before Next Meeting\\n...\\n## Discussion Topics for Next Meeting\\n...\\n## Suggested Attendees\\n...",
+  "prep": { "emails": [...], "conversations": [...], "action_items": [...], "discussion_topics": [...], "suggested_attendees": [...] },
   "brief": "## Problem\\n...\\n## Target User\\n...\\n## User Stories\\n...\\n## Success Metrics\\n...\\n## Risks\\n...",
   "roadmap": "## P0 — Must Do\\n...\\n## P1 — Should Do\\n...\\n## P2 — Nice to Have\\n...",
   "security": "## Security Considerations\\n(Reference the firm's WISP and Records Retention Policy provided above)\\n## Risks\\n...\\n## Compliance Requirements\\n...\\n## Recommendations\\n...",
@@ -1169,7 +1225,8 @@ RESPOND WITH VALID JSON ONLY (no markdown fences around the JSON itself):
   "process": "## Process Flow\\n\\nDescription...\\n\\n\`\`\`mermaid\\ngraph TD\\n  start[Step 1]\\n  decide{Decision}\\n  yes[Step 2]\\n  no[Step 3]\\n  start --> decide\\n  decide -->|Yes| yes\\n  decide -->|No| no\\n\`\`\`\\n\\n## Notes\\n..."
 }
 
-Each value should be a complete markdown document. Be thorough but grounded in what was actually said.`;
+Each markdown value should be a complete document. Be thorough but grounded in what was actually said.
+IMPORTANT: In the markdown artifacts (brief, roadmap, security, pipeline, process), whenever you reference a specific point discussed in a meeting, include a citation link using this format: [See discussion](VIDEO_URL) where VIDEO_URL is the Fathom video link with timestamp from the transcript context above.`;
 
   // Show loading state in all artifact tabs
   const loadLabels = { prep:'meeting prep', brief:'product brief', roadmap:'roadmap', security:'security eval', pipeline:'data pipeline', process:'process flow' };
@@ -1465,6 +1522,99 @@ function showTopicDetail(topicId) {
   `;
 }
 
+// ═══════ MEETING PREP RENDERER ═══════
+
+function citeButton(url) {
+  if (!url) return '';
+  return `<a href="${url}" target="_blank" rel="noopener" class="cite-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6,3 13,8 6,13"/></svg>Watch in video</a>`;
+}
+
+function renderPrepArtifact(prep) {
+  // Handle case where prep came back as markdown string (fallback)
+  if (typeof prep === 'string') return `<div class="proj-artifact">${simpleMarkdown(prep)}</div>`;
+
+  let html = '';
+
+  // Emails
+  if (prep.emails && prep.emails.length) {
+    html += '<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--green-40)">Emails to Send</h2>';
+    prep.emails.forEach(e => {
+      const initials = (e.to || '??').split(' ').map(w => w[0]).join('').toUpperCase().substring(0,2);
+      html += `<div class="email-card">
+        <div class="email-card-header">
+          <div class="email-card-avatar">${initials}</div>
+          <div class="email-card-meta">
+            <div class="email-card-to">To: ${esc(e.to)}</div>
+            <div class="email-card-subject">${esc(e.subject)}</div>
+          </div>
+        </div>
+        <div class="email-card-body">${simpleMarkdown(e.body || '')}</div>
+        ${e.video_url ? `<div class="email-card-footer">${citeButton(e.video_url)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  // Conversations
+  if (prep.conversations && prep.conversations.length) {
+    html += '<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--green-40)">Conversations to Have</h2>';
+    prep.conversations.forEach(c => {
+      html += `<div class="convo-card">
+        <div class="convo-header">
+          <span class="convo-person">${esc(c.with)}</span>
+          <span style="color:var(--text-muted)">&mdash; ${esc(c.topic)}</span>
+        </div>
+        <div class="convo-bubble">${simpleMarkdown(c.message || '')}</div>
+        ${c.why ? `<div class="convo-context">${esc(c.why)}</div>` : ''}
+        ${c.video_url ? `<div class="convo-cite">${citeButton(c.video_url)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  // Action Items
+  if (prep.action_items && prep.action_items.length) {
+    html += '<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--green-40)">Action Items</h2>';
+    prep.action_items.forEach(a => {
+      html += `<div class="action-card">
+        <div class="action-check"></div>
+        <div class="action-content">
+          <div class="action-owner">${esc(a.owner)}</div>
+          <div class="action-desc">${esc(a.task)}</div>
+          ${a.unblocks ? `<div class="action-unblocks">Unblocks: ${esc(a.unblocks)}</div>` : ''}
+          ${a.video_url ? `<div class="action-cite">${citeButton(a.video_url)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+  }
+
+  // Discussion Topics
+  if (prep.discussion_topics && prep.discussion_topics.length) {
+    html += '<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--green-40)">Discussion Topics for Next Meeting</h2>';
+    prep.discussion_topics.forEach(d => {
+      html += `<div style="padding:12px 16px;background:white;border:1px solid var(--border);border-left:3px solid var(--blue);margin:.5rem 0;box-shadow:var(--sh-sm)">
+        <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--blue);margin-bottom:4px">${esc(d.topic)}</div>
+        <div style="font-size:14px;color:var(--text-light);line-height:1.6">${esc(d.context)}</div>
+        ${d.video_url ? `<div style="margin-top:6px">${citeButton(d.video_url)}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  // Suggested Attendees
+  if (prep.suggested_attendees && prep.suggested_attendees.length) {
+    html += '<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:24px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--green-40)">Suggested Attendees</h2>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    prep.suggested_attendees.forEach(a => {
+      const initials = (a.name || '??').split(' ').map(w => w[0]).join('').toUpperCase().substring(0,2);
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border:1px solid var(--border);box-shadow:var(--sh-sm);flex:1;min-width:220px">
+        <div style="width:32px;height:32px;background:var(--blue-10);color:var(--blue);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:800;font-size:12px;flex-shrink:0">${initials}</div>
+        <div><div style="font-family:var(--fd);font-size:13px;font-weight:700;color:var(--blue)">${esc(a.name)}</div><div style="font-size:13px;color:var(--text-light)">${esc(a.reason)}</div></div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  return html || '<div class="proj-artifact"><p style="color:var(--text-muted)">No prep data generated.</p></div>';
+}
+
 // ═══════ FIRM POLICIES ═══════
 const FIRM_POLICIES = {
   retention: `# KR Records Retention Policy & Schedule
@@ -1660,7 +1810,7 @@ function renderGraph3D() {
         .height(h)
         .nodeColor(n => n.color)
         .nodeVal(n => n.val)
-        .nodeLabel('')
+        .nodeLabel(n => n.name)
         .nodeOpacity(0.92)
         .nodeResolution(16)
         .linkColor(l => {
@@ -1670,38 +1820,8 @@ function renderGraph3D() {
         })
         .linkWidth(l => l.type === 'discussed_in' ? 2 : 0.6)
         .linkOpacity(0.7)
-        .nodeThreeObject(node => {
-          const group = new THREE.Group();
-          const radius = node.type === 'theme' ? 6 : node.type === 'meeting' ? 4 : 3;
-          const geo = new THREE.SphereGeometry(radius, 16, 16);
-          const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(node.color), transparent: true, opacity: 0.92 });
-          group.add(new THREE.Mesh(geo, mat));
-
-          // Label sprite
-          const cvs = document.createElement('canvas');
-          const ctx = cvs.getContext('2d');
-          const fs = node.type === 'theme' ? 26 : 18;
-          cvs.width = 512; cvs.height = 64;
-          ctx.font = (node.type === 'theme' ? '700' : '400') + ' ' + fs + 'px Montserrat, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillStyle = node.type === 'theme' ? '#aed136' : node.type === 'person' ? 'rgba(255,255,255,0.85)' : 'rgba(119,148,188,0.9)';
-          ctx.fillText(node.name, 256, 42);
-          const tex = new THREE.CanvasTexture(cvs);
-          const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-          spr.scale.set(38, 5, 1);
-          spr.position.set(0, radius + 3, 0);
-          group.add(spr);
-          return group;
-        })
         .onNodeClick(node => showGraphDetail(node))
         .d3Force('charge').strength(n => n.type === 'theme' ? -200 : -60);
-
-      // Lights
-      const scene = graph3dInstance.scene();
-      scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-      const dl = new THREE.DirectionalLight(0xffffff, 0.35);
-      dl.position.set(100, 100, 100);
-      scene.add(dl);
     } catch(e) {
       console.error('Graph3D init error:', e);
       container.querySelector('#graph3d-info').textContent = 'Error initializing 3D graph: ' + e.message;
