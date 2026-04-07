@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaufman Rossin — AI &amp; Data Integration Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
+<script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
+<style>
+  :root {
+    /* JOY Design System Tokens */
+    --green: #aed136;
+    --green-text: #5a7200;
+    --green-80: #beda5e;
+    --green-60: #cee386;
+    --green-40: #deecaf;
+    --green-20: #eef5d7;
+    --green-10: #f6faea;
+    --blue: #1d4c7e;
+    --blue-80: #4a70a0;
+    --blue-60: #7794bc;
+    --blue-40: #a3b8d4;
+    --blue-20: #d1dcea;
+    --blue-10: #e8eef4;
+    --charcoal: #3c3c3c;
+    --gray-60: #8e8e8e;
+    --gray-40: #b5b5b5;
+    --gray-20: #d9d9d9;
+    --gray-10: #f2f2f2;
+    --bg: #f9f9f9;
+    --card: #ffffff;
+    --text: #3c3c3c;
+    --text-light: #828282;
+    --text-muted: #b5b5b5;
+    --border: rgba(29,76,126,.12);
+    --red: #a0200d;
+    --orange: #e67e22;
+    --critical: #a0200d;
+    --high: #e67e22;
+    --medium: #f39c12;
+    --low: #2f7436;
+    --fd: 'Montserrat','Century Gothic',sans-serif;
+    --fb: 'Source Sans 3','Proxima Nova',sans-serif;
+    --sidebar-w: 240px;
+    --ease: cubic-bezier(0,0,.2,1);
+    --spring: cubic-bezier(.34,1.56,.64,1);
+    --fast: 150ms;
+    --base: 260ms;
+    --slow: 400ms;
+    --sh-sm: 0 1px 6px rgba(29,76,126,.09);
+    --sh-md: 0 4px 20px rgba(29,76,126,.13);
+  }
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--fb); background:var(--bg); color:var(--text); line-height:1.55; display:flex; min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width:var(--sidebar-w); background:var(--blue); color:white; display:flex; flex-direction:column;
+    position:fixed; top:0; left:0; bottom:0; z-index:200; transition:transform var(--base) var(--ease);
+  }
+  .sidebar-brand { padding:1.4rem 1.2rem .8rem; border-bottom:1px solid rgba(255,255,255,.08); }
+  .sidebar-brand h1 { font-family:var(--fd); font-size:.95rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+  .sidebar-brand .sub { font-family:var(--fb); font-size:.72rem; font-weight:300; color:var(--green); margin-top:.15rem; font-style:italic; }
+  .sidebar-nav { flex:1; padding:.6rem 0; overflow-y:auto; }
+  .sidebar-nav .nav-section { padding:.5rem 1.2rem .3rem; font-family:var(--fd); font-size:.6rem; text-transform:uppercase; letter-spacing:.2em; color:rgba(255,255,255,.3); font-weight:700; }
+  .sidebar-nav button {
+    display:flex; align-items:center; gap:.65rem; width:100%; padding:.55rem 1.2rem; border:none; background:transparent;
+    color:rgba(255,255,255,.6); font-family:var(--fd); font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    cursor:pointer; text-align:left; transition:all var(--fast) var(--ease);
+  }
+  .sidebar-nav button:hover { background:rgba(255,255,255,.06); color:white; }
+  .sidebar-nav button.active { background:rgba(174,209,54,.1); color:var(--green); border-right:3px solid var(--green); }
+  .sidebar-nav button .icon { font-size:1rem; width:20px; text-align:center; }
+  .sidebar-nav button .badge { margin-left:auto; font-family:var(--fd); background:var(--green); color:var(--blue); font-size:.6rem; padding:.15rem .45rem; font-weight:700; letter-spacing:.05em; }
+  .sidebar-footer { padding:.8rem 1.2rem; border-top:1px solid rgba(255,255,255,.08); }
+  .api-status { display:flex; align-items:center; gap:.5rem; font-family:var(--fd); font-size:.7rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+  .api-status .dot { width:8px; height:8px; border-radius:50%; }
+  .dot-green { background:var(--green); box-shadow:0 0 6px rgba(174,209,54,.5); }
+  .dot-red { background:var(--red); }
+  .dot-yellow { background:#f39c12; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Main ── */
+  .main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh; }
+  .topbar { background:rgba(255,255,255,.94); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); padding:.7rem 2rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .topbar h2 { font-family:var(--fd); font-size:.85rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--blue); }
+  .topbar-actions { display:flex; gap:.6rem; align-items:center; }
+  .content { flex:1; padding:1.5rem 2rem 2rem; }
+
+  /* ── Buttons ── */
+  .btn {
+    display:inline-flex; align-items:center; gap:.4rem; padding:11px 22px; border:none;
+    font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    cursor:pointer; transition:all var(--base) var(--ease);
+  }
+  .btn-primary { background:var(--green); color:var(--blue); }
+  .btn-primary:hover { background:var(--green-80); transform:translateY(-1px); box-shadow:var(--sh-md); }
+  .btn-secondary { background:transparent; border:2px solid var(--blue); color:var(--blue); }
+  .btn-secondary:hover { background:var(--blue-10); }
+  .btn-sm { padding:7px 14px; font-size:11px; }
+  .btn-danger { background:transparent; color:var(--red); border:2px solid var(--red); }
+  .btn-danger:hover { background:#fde8e8; }
+
+  /* ── Connect Screen ── */
+  .connect-screen {
+    display:flex; align-items:center; justify-content:center; min-height:100vh; width:100%; flex:1;
+    background:var(--blue); position:fixed; inset:0; z-index:300;
+    background-image:linear-gradient(rgba(174,209,54,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(174,209,54,.05) 1px,transparent 1px);
+    background-size:64px 64px;
+  }
+  .connect-card {
+    background:white; padding:2.5rem; width:100%; max-width:440px; box-shadow:var(--sh-md);
+  }
+  .connect-card h2 { font-family:var(--fd); color:var(--blue); font-size:1.3rem; font-weight:800; letter-spacing:.04em; margin-bottom:.3rem; }
+  .connect-card .sub { font-family:var(--fb); font-weight:300; color:var(--text-light); font-size:.85rem; margin-bottom:1.5rem; }
+  .form-group { margin-bottom:1rem; }
+  .form-group label { display:block; font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--blue); margin-bottom:.4rem; }
+  .form-group input {
+    width:100%; padding:11px 14px; border:2px solid var(--gray-20); font-family:var(--fb); font-size:15px; color:var(--text);
+    transition:border-color var(--fast),box-shadow var(--fast);
+  }
+  .form-group input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-10); }
+  .form-hint { font-size:.73rem; color:var(--text-muted); margin-top:.3rem; }
+  .connect-error { background:var(--green-10); border-left:3px solid var(--red); color:var(--red); padding:.6rem .8rem; font-size:.82rem; margin-bottom:1rem; display:none; }
+
+  /* ── Table ── */
+  .data-table { width:100%; border-collapse:collapse; background:white; overflow:hidden; border:1px solid var(--border); }
+  .data-table thead { background:var(--blue); color:white; }
+  .data-table th { font-family:var(--fd); padding:.65rem 1rem; text-align:left; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.16em; white-space:nowrap; }
+  .data-table td { padding:.6rem 1rem; border-top:1px solid var(--gray-10); font-size:15px; }
+  .data-table tr:hover td { background:var(--bg); }
+  .data-table tr { cursor:pointer; transition:background var(--fast); }
+  .data-table .title-cell { font-family:var(--fd); font-weight:700; font-size:14px; letter-spacing:.02em; color:var(--blue); max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .data-table .date-cell { white-space:nowrap; color:var(--text-light); font-size:14px; }
+  .data-table .duration-cell { font-family:var(--fb); font-size:14px; color:var(--text-muted); font-feature-settings:'tnum'; }
+  .data-table .participants-cell { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+
+  /* ── Cards / Grid ── */
+  .card { background:white; border:1px solid var(--border); padding:1.3rem; box-shadow:var(--sh-sm); transition:box-shadow var(--base),transform var(--base) var(--ease); }
+  .card:hover { box-shadow:var(--sh-md); transform:translateY(-2px); }
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+  .stat-card { background:white; border:1px solid var(--border); padding:1rem 1.2rem; border-left:4px solid var(--green); box-shadow:var(--sh-sm); }
+  .stat-card .label { font-family:var(--fd); font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--text-light); font-weight:700; }
+  .stat-card .value { font-family:var(--fd); font-size:1.5rem; font-weight:800; color:var(--blue); margin-top:.2rem; }
+  .stat-card .sub { font-size:14px; color:var(--text-light); margin-top:.1rem; }
+
+  /* ── Topics ── */
+  .topics-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1rem; }
+  .topic-card {
+    background:white; border:1px solid var(--border); padding:1.2rem; cursor:pointer;
+    transition:all var(--base) var(--ease); position:relative; overflow:hidden; box-shadow:var(--sh-sm);
+  }
+  .topic-card:hover { box-shadow:var(--sh-md); transform:translateY(-2px); }
+  .topic-card .topic-color { position:absolute; top:0; left:0; right:0; height:4px; }
+  .topic-card h3 { font-family:var(--fd); font-size:15px; font-weight:700; letter-spacing:.02em; color:var(--blue); margin-top:.3rem; margin-bottom:.4rem; }
+  .topic-card .topic-meta { font-family:var(--fd); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-light); display:flex; gap:1rem; margin-bottom:.6rem; }
+  .topic-card .topic-videos { display:flex; flex-wrap:wrap; gap:.3rem; }
+  .topic-card .video-tag { font-family:var(--fd); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:.15rem .5rem; background:var(--bg); color:var(--text-light); border:1px solid var(--border); }
+  .topic-card .topic-summary { font-size:14px; color:var(--text-light); margin-top:.5rem; line-height:1.55; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+  /* ── Topic Detail ── */
+  .topic-detail-header { margin-bottom:1.5rem; }
+  .topic-detail-header h2 { font-family:var(--fd); font-weight:700; display:flex; align-items:center; gap:.6rem; color:var(--blue); }
+  .topic-detail-header .back-btn { cursor:pointer; color:var(--blue-60); font-size:1.1rem; transition:color var(--fast); background:none; border:none; font-family:var(--fd); }
+  .topic-detail-header .back-btn:hover { color:var(--blue); }
+  .segment-list { display:flex; flex-direction:column; gap:1rem; }
+  .segment-card { background:white; border:1px solid var(--border); overflow:hidden; box-shadow:var(--sh-sm); }
+  .segment-card .segment-header {
+    padding:.7rem 1rem; background:var(--bg); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  }
+  .segment-card .segment-header .video-title { font-family:var(--fd); font-weight:700; font-size:14px; letter-spacing:.02em; color:var(--blue); }
+  .segment-card .segment-header .segment-time { font-family:var(--fb); font-size:14px; color:var(--text-muted); font-feature-settings:'tnum'; }
+  .segment-card .segment-body { padding:1rem; }
+  .segment-card .segment-description { font-size:15px; color:var(--text); margin-bottom:.8rem; line-height:1.6; }
+  .segment-card .segment-transcript { font-size:14px; color:var(--text-light); background:var(--bg); padding:.8rem; max-height:200px; overflow-y:auto; }
+  .segment-card .segment-transcript .speaker { font-family:var(--fd); font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--blue); }
+  .segment-card .segment-transcript .timestamp { font-family:var(--fb); font-size:12px; color:var(--text-muted); margin-right:.4rem; font-feature-settings:'tnum'; }
+  .segment-card .segment-link { display:inline-flex; align-items:center; gap:.3rem; font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--blue); text-decoration:none; margin-top:.5rem; }
+  .segment-card .segment-link:hover { color:var(--green-text); }
+
+  /* ── Meeting Detail ── */
+  .meeting-detail-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem; }
+  .meeting-detail-header h2 { font-family:var(--fd); font-weight:700; display:flex; align-items:center; gap:.6rem; color:var(--blue); }
+  .meeting-meta-row { display:flex; gap:1.5rem; flex-wrap:wrap; font-size:14px; color:var(--text-light); margin-top:.4rem; }
+  .meeting-summary-card { background:white; border:1px solid var(--border); padding:1.3rem; margin-bottom:1.5rem; box-shadow:var(--sh-sm); }
+  .meeting-summary-card h3 { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--green-text); margin-bottom:.6rem; }
+  .meeting-summary-card .summary-content { font-size:15px; line-height:1.7; color:var(--text); }
+  .meeting-summary-card .summary-content h1,
+  .meeting-summary-card .summary-content h2 { font-family:var(--fd); font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--green-text); margin:1.5rem 0 .6rem; padding-bottom:.4rem; border-bottom:2px solid var(--green-40); }
+  .meeting-summary-card .summary-content h2:first-child { margin-top:0; }
+  .meeting-summary-card .summary-content h3 { font-family:var(--fd); font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--blue); margin:1.2rem 0 .4rem; }
+  .meeting-summary-card .summary-content p { margin:.4rem 0 .6rem; }
+  .meeting-summary-card .summary-content ul { margin:.4rem 0 .8rem 0; padding-left:0; list-style:none; }
+  .meeting-summary-card .summary-content li { margin:.4rem 0; padding:.5rem .7rem .5rem 1rem; position:relative; background:var(--bg); border-left:3px solid var(--green); }
+  .meeting-summary-card .summary-content li strong { color:var(--blue); }
+  .meeting-summary-card .summary-content a { transition:border-color var(--fast); }
+  .meeting-summary-card .summary-content a:hover { border-color:var(--green) !important; }
+  .transcript-panel { background:white; border:1px solid var(--border); overflow:hidden; box-shadow:var(--sh-sm); }
+  .transcript-panel h3 { font-family:var(--fd); padding:.8rem 1rem; font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; border-bottom:1px solid var(--border); background:var(--bg); color:var(--blue); }
+  .transcript-body { padding:1rem; max-height:500px; overflow-y:auto; }
+  .transcript-line { display:flex; gap:.6rem; padding:.35rem 0; font-size:14px; }
+  .transcript-line .ts { font-family:var(--fb); font-size:12px; color:var(--text-muted); min-width:55px; padding-top:.15rem; font-feature-settings:'tnum'; }
+  .transcript-line .spk { font-family:var(--fd); font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--blue); min-width:130px; }
+  .transcript-line .txt { flex:1; color:var(--text); }
+
+  /* ── Search ── */
+  .search-box { position:relative; }
+  .search-box input { padding:8px 12px 8px 32px; border:2px solid var(--gray-20); font-family:var(--fb); font-size:14px; width:220px; transition:border-color var(--fast); }
+  .search-box input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-10); }
+  .search-box .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:.85rem; pointer-events:none; }
+
+  /* ── Loading ── */
+  .loading-overlay {
+    position:fixed; inset:0; background:rgba(29,76,126,.92); z-index:1000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1rem;
+  }
+  .loading-overlay .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,.15); border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; }
+  .loading-inline { width:32px; height:32px; border:3px solid var(--blue-20); border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto; }
+
+  /* ── Project Tabs ── */
+  .proj-tabs { display:flex; gap:2px; border-bottom:2px solid var(--border); margin-bottom:1.5rem; }
+  .proj-tab {
+    font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    padding:10px 16px; background:none; border:none; cursor:pointer; color:var(--text-light);
+    border-bottom:3px solid transparent; margin-bottom:-2px; transition:all var(--fast) var(--ease);
+  }
+  .proj-tab:hover { color:var(--blue); }
+  .proj-tab.active { color:var(--green-text); border-bottom-color:var(--green); }
+  .proj-tab-content { display:none; }
+  .proj-tab-content.active { display:block; }
+  .proj-gen-banner {
+    text-align:center; padding:3rem 2rem; background:white; border:2px dashed var(--border); margin:1rem 0;
+  }
+  .proj-gen-banner h4 { font-family:var(--fd); font-weight:700; font-size:14px; color:var(--blue); margin-bottom:.4rem; }
+  .proj-gen-banner p { font-size:14px; color:var(--text-light); margin-bottom:1rem; }
+  .proj-artifact h3 { font-family:var(--fd); font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--green-text); margin:1.5rem 0 .6rem; padding-bottom:.4rem; border-bottom:2px solid var(--green-40); }
+  .proj-artifact h3:first-child { margin-top:0; }
+  .proj-artifact p { margin:.4rem 0 .6rem; font-size:15px; line-height:1.65; }
+  .proj-artifact ul { margin:.4rem 0 .8rem 0; padding-left:0; list-style:none; }
+  .proj-artifact li { margin:.4rem 0; padding:.5rem .7rem .5rem 1rem; background:var(--bg); border-left:3px solid var(--green); font-size:15px; line-height:1.55; }
+  .proj-artifact li strong { color:var(--blue); }
+  .proj-artifact pre { margin:1rem 0; }
+
+  /* ── Mermaid Diagrams ── */
+  .mermaid-container { background:white; border:1px solid var(--border); padding:1.5rem; margin:1rem 0; overflow-x:auto; box-shadow:var(--sh-sm); }
+  .mermaid-container svg { max-width:100%; height:auto; }
+  .mermaid { font-family:var(--fd) !important; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .loading-overlay .loading-text { font-family:var(--fd); color:white; font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+
+  /* ── Empty State ── */
+  .empty-state { text-align:center; padding:4rem 2rem; color:var(--text-light); }
+  .empty-state .icon { font-size:3rem; margin-bottom:1rem; opacity:.4; }
+  .empty-state h3 { font-family:var(--fd); font-weight:700; color:var(--blue); margin-bottom:.5rem; }
+
+  /* ── Tags ── */
+  .tag { display:inline-block; padding:4px 10px; font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+  .tag-blue { background:var(--blue-10); color:var(--blue); }
+  .tag-green { background:var(--green-10); color:var(--green-text); border:1px solid var(--green-40); }
+  .tag-orange { background:#fff8ec; color:#b45309; }
+  .tag-purple { background:#f3e8ff; color:#7c3aed; }
+  .tag-red { background:#fde8e8; color:var(--red); }
+
+  /* ── Risk Badges ── */
+  .risk-badge { display:inline-block; padding:4px 10px; font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+  .risk-critical { background:#fde8e8; color:var(--critical); }
+  .risk-high { background:#fef3e2; color:#b45309; }
+  .risk-medium { background:#fef9e7; color:#92600a; }
+  .risk-low { background:var(--green-10); color:var(--green-text); }
+
+  /* ── Priority Tags ── */
+  .priority { display:inline-block; padding:5px 12px; font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-right:.5rem; }
+  .p0 { background:#fde8e8; color:var(--critical); border:1px solid #f5c6c6; }
+  .p1 { background:#fef3e2; color:#b45309; border:1px solid #fcd9a0; }
+  .p2 { background:var(--blue-10); color:var(--blue); border:1px solid var(--blue-20); }
+
+  /* ── Misc ── */
+  .section-divider { height:1px; background:var(--border); margin:2rem 0; }
+  .hidden { display:none !important; }
+  .flex-between { display:flex; align-items:center; justify-content:space-between; }
+
+  /* ── User Story / Roadmap ── */
+  .story { background:white; border:1px solid var(--border); padding:1rem 1.2rem; margin:.6rem 0; border-left:3px solid var(--green); box-shadow:var(--sh-sm); }
+  .story .role { font-family:var(--fd); font-weight:700; font-size:13px; letter-spacing:.06em; color:var(--blue); }
+  .roadmap-item { background:white; border:1px solid var(--border); padding:1.2rem 1.5rem; margin:.8rem 0; box-shadow:var(--sh-sm); transition:box-shadow var(--base); }
+  .roadmap-item:hover { box-shadow:var(--sh-md); }
+  .roadmap-item h4 { margin-top:0; display:flex; align-items:center; gap:.5rem; font-family:var(--fd); font-size:14px; font-weight:700; color:var(--blue); }
+  .roadmap-meta { display:flex; flex-wrap:wrap; gap:1.5rem; margin-top:.5rem; font-size:14px; color:var(--text-light); }
+  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; margin:1rem 0; }
+  .metric-card { background:white; border:1px solid var(--border); padding:1.2rem; border-left:4px solid var(--green); box-shadow:var(--sh-sm); }
+  .metric-card .mc-label { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-light); }
+  .metric-card .mc-value { font-family:var(--fd); font-size:16px; font-weight:700; color:var(--blue); margin-top:.3rem; }
+  .risk-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; margin:1rem 0; }
+  .risk-summary-card { background:white; border:1px solid var(--border); padding:1rem 1.2rem; box-shadow:var(--sh-sm); }
+  .risk-summary-card .category { font-family:var(--fd); font-weight:700; font-size:14px; color:var(--blue); }
+  .risk-summary-card .concern { font-size:14px; color:var(--text-light); margin-top:.3rem; }
+  .callout { background:var(--blue-10); border-left:3px solid var(--blue); padding:1rem 1.2rem; margin:1rem 0; font-size:15px; }
+  .callout.warning { background:#fff8ec; border-left-color:var(--orange); }
+  .callout.danger { background:#fde8e8; border-left-color:var(--red); }
+  pre { background:var(--charcoal); color:rgba(255,255,255,.8); padding:1.5rem; overflow-x:auto; font-family:'Cascadia Code','Fira Code','Consolas',monospace; font-size:.78rem; line-height:1.5; margin:1rem 0; }
+
+  /* ── Responsive ── */
+  @media(max-width:900px) {
+    .sidebar { transform:translateX(-100%); }
+    .sidebar.open { transform:translateX(0); }
+    .main { margin-left:0; }
+    .content { padding:1rem; }
+    .topbar { padding:.7rem 1rem; }
+  }
+  @media print {
+    .sidebar,.topbar { display:none; }
+    .main { margin-left:0; }
+  }
+
+  /* ── Topic colors (JOY palette influenced) ── */
+  .tc-0{background:var(--blue)}.tc-1{background:#e74c3c}.tc-2{background:var(--green)}.tc-3{background:#9b59b6}.tc-4{background:#e67e22}
+  .tc-5{background:#1abc9c}.tc-6{background:var(--charcoal)}.tc-7{background:#f39c12}.tc-8{background:#d35400}.tc-9{background:#16a085}
+  .tc-10{background:#8e44ad}.tc-11{background:var(--red)}.tc-12{background:var(--green-text)}.tc-13{background:var(--blue-80)}.tc-14{background:var(--green-80)}
+</style>
+</head>
+<body>
+
+<!-- ═══════ CONNECT SCREEN ═══════ -->
+<div id="connectScreen" class="connect-screen">
+  <div class="connect-card">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="display:inline-flex;align-items:center;gap:0;margin-bottom:.6rem">
+        <span style="font-family:var(--fd);font-weight:800;font-size:20px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)">Kaufman</span>
+        <div style="width:2px;height:22px;background:var(--green);margin:0 8px"></div>
+        <span style="font-family:var(--fd);font-weight:400;font-size:20px;letter-spacing:.09em;text-transform:uppercase;color:var(--charcoal)">Rossin</span>
+      </div>
+      <div style="font-family:var(--fb);font-weight:300;font-size:13px;color:var(--text-light);font-style:italic">joy is your bottom line</div>
+    </div>
+    <div style="font-family:var(--fd);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--green-text);margin-bottom:.4rem">AI &amp; Data Integration Hub</div>
+    <p style="font-size:15px;color:var(--text-light);margin-bottom:1.2rem;line-height:1.55">Connect your Fathom account to sync meeting recordings, transcripts, and auto-extract cross-meeting themes.</p>
+    <div id="connectError" class="connect-error"></div>
+    <div class="form-group">
+      <label>Fathom API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="Paste your Fathom API key..." autocomplete="off">
+      <div class="form-hint">Generate at <strong>app.fathom.video/settings &rarr; API</strong>. Your key is stored only in this browser session.</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="connectToFathom()">
+      Connect to Fathom
+    </button>
+    <div id="connectProgress" style="display:none;margin-top:1rem;font-size:.8rem;color:var(--text-light);text-align:center"></div>
+    <div style="text-align:center;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
+      <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.5rem">Or load from a saved file</div>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+        &#128193; Load JSON File
+        <input type="file" accept=".json" style="display:none" onchange="loadFromFile(this.files[0])">
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ LOADING OVERLAY ═══════ -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Connecting to Fathom...</div>
+</div>
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<div id="sidebar" class="sidebar hidden">
+  <div class="sidebar-brand">
+    <h1>Kaufman Rossin</h1>
+    <div class="sub">AI &amp; Data Integration Hub</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Fathom Meetings</div>
+    <button class="active" onclick="showView('meetings')" data-view="meetings">
+      <span class="icon">&#128197;</span> All Meetings <span class="badge" id="meetingCount">0</span>
+    </button>
+    <button onclick="showView('topics')" data-view="topics">
+      <span class="icon">&#128218;</span> Themes Index <span class="badge" id="topicCount">0</span>
+    </button>
+    <button onclick="showView('graph3d')" data-view="graph3d">
+      <span class="icon">&#127760;</span> Knowledge Graph
+    </button>
+
+    <div id="projectsNavSection">
+      <div class="nav-section" style="margin-top:.8rem">Projects</div>
+      <div id="projectsNavItems">
+        <button onclick="showView('topics')" style="color:var(--green);font-size:.65rem;letter-spacing:.08em">
+          <span class="icon">&#9889;</span> Unlock with AI &rarr;
+        </button>
+      </div>
+    </div>
+
+  </nav>
+  <div class="sidebar-footer">
+    <div class="api-status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center;margin-top:.5rem" onclick="disconnect()">Disconnect</button>
+  </div>
+</div>
+
+<!-- ═══════ MAIN CONTENT ═══════ -->
+<div id="mainApp" class="main hidden">
+  <div class="topbar">
+    <h2 id="viewTitle">All Meetings</h2>
+    <div class="topbar-actions">
+      <div class="search-box">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="globalSearch" placeholder="Search meetings, themes..." oninput="handleSearch(this.value)">
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshData()">&#8635; Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Meetings View -->
+    <div id="view-meetings" class="view-panel">
+      <div class="stat-grid" id="meetingStats"></div>
+      <div id="meetingsTableContainer"></div>
+    </div>
+
+    <!-- Meeting Detail View -->
+    <div id="view-meeting-detail" class="view-panel hidden"></div>
+
+    <!-- Topics View -->
+    <div id="view-topics" class="view-panel hidden">
+      <div class="stat-grid" id="topicStats"></div>
+      <div id="topicsContainer"></div>
+    </div>
+
+    <!-- Topic Detail View -->
+    <div id="view-topic-detail" class="view-panel hidden"></div>
+
+    <!-- 3D Knowledge Graph -->
+    <div id="view-graph3d" class="view-panel hidden">
+      <div id="graph3d-container" style="width:100%;height:calc(100vh - 120px);background:var(--charcoal);position:relative">
+        <div id="graph3d-legend" style="position:absolute;top:16px;left:16px;z-index:10;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Theme</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#4a70a0;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Meeting</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Person</span></div>
+        </div>
+        <div id="graph3d-info" style="position:absolute;bottom:16px;left:16px;z-index:10;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.35)">Click a node to inspect. Drag to rotate. Scroll to zoom.</div>
+        <div id="graph3d-detail" style="position:absolute;top:16px;right:16px;z-index:10;max-width:300px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Project Detail View (per-topic project package) -->
+    <div id="view-project" class="view-panel hidden"></div>
+
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ═══════ MERMAID INIT ═══════
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#e8eef4',
+    primaryTextColor: '#1d4c7e',
+    primaryBorderColor: '#1d4c7e',
+    secondaryColor: '#f6faea',
+    secondaryTextColor: '#5a7200',
+    secondaryBorderColor: '#aed136',
+    tertiaryColor: '#f2f2f2',
+    tertiaryTextColor: '#3c3c3c',
+    tertiaryBorderColor: '#b5b5b5',
+    lineColor: '#4a70a0',
+    textColor: '#3c3c3c',
+    mainBkg: '#e8eef4',
+    nodeBorder: '#1d4c7e',
+    clusterBkg: '#f9f9f9',
+    clusterBorder: '#d1dcea',
+    titleColor: '#1d4c7e',
+    edgeLabelBackground: '#ffffff',
+    fontSize: '14px',
+    fontFamily: 'Montserrat, Century Gothic, sans-serif'
+  },
+  flowchart: { curve: 'basis', padding: 16 },
+  securityLevel: 'loose'
+});
+
+// ═══════ ENTITY COLOR REGISTRY ═══════
+// Ensures the same system/entity always gets the same color across all diagrams
+const ENTITY_COLORS = {};
+const ENTITY_PALETTE = [
+  { bg:'#e8eef4', border:'#1d4c7e', text:'#1d4c7e' },  // blue
+  { bg:'#f6faea', border:'#aed136', text:'#5a7200' },  // green
+  { bg:'#f2f2f2', border:'#3c3c3c', text:'#3c3c3c' },  // charcoal
+  { bg:'#d1dcea', border:'#4a70a0', text:'#1d4c7e' },  // blue-20
+  { bg:'#eef5d7', border:'#beda5e', text:'#5a7200' },  // green-20
+  { bg:'#deecaf', border:'#aed136', text:'#5a7200' },  // green-40
+  { bg:'#a3b8d4', border:'#1d4c7e', text:'#ffffff' },  // blue-40
+  { bg:'#7794bc', border:'#1d4c7e', text:'#ffffff' },  // blue-60
+];
+let entityColorIdx = 0;
+
+function getEntityColor(entityName) {
+  const key = entityName.toLowerCase().replace(/[^a-z0-9]/g,'');
+  if (!ENTITY_COLORS[key]) {
+    ENTITY_COLORS[key] = ENTITY_PALETTE[entityColorIdx % ENTITY_PALETTE.length];
+    entityColorIdx++;
+  }
+  return ENTITY_COLORS[key];
+}
+
+// Build a Mermaid style line for a node
+function mermaidNodeStyle(nodeId, entityName) {
+  const c = getEntityColor(entityName);
+  return `style ${nodeId} fill:${c.bg},stroke:${c.border},stroke-width:2px,color:${c.text}`;
+}
+
+// ═══════ STATE ═══════
+let STATE = {
+  apiKey: '',
+  perplexityKey: '',
+  strategy: '',
+  meetings: [],
+  topics: [],
+  topicsUnlocked: false,
+  projectDocs: {},
+  currentView: 'meetings',
+  isDemo: false
+};
+
+// Restore cached project docs
+try { const pd = sessionStorage.getItem('project_docs'); if (pd) STATE.projectDocs = JSON.parse(pd); } catch(e) {}
+
+const TOPIC_COLORS = ['#3498db','#e74c3c','#2ecc71','#9b59b6','#e67e22','#1abc9c','#34495e','#f39c12','#d35400','#16a085','#8e44ad','#c0392b','#27ae60','#2980b9','#f1c40f'];
+
+// ═══════ API ═══════
+// Build a Fathom API URL with query params
+function buildFathomUrl(endpoint, params = {}) {
+  let url = '/external/v1' + endpoint;
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (Array.isArray(v)) v.forEach(val => sp.append(k, val));
+    else sp.append(k, v);
+  });
+  const qs = sp.toString();
+  return qs ? url + '?' + qs : url;
+}
+
+// Try fetching via a specific strategy
+async function tryFetch(strategy, apiPath, apiKey) {
+  let fetchUrl, opts = { method: 'GET', headers: { 'Accept': 'application/json' } };
+  const fullTarget = 'https://api.fathom.ai' + apiPath;
+
+  switch (strategy) {
+    case 'local':
+      fetchUrl = 'http://localhost:3001/fathom' + apiPath;
+      opts.headers['X-Api-Key'] = apiKey;
+      break;
+    case 'corsproxy':
+      fetchUrl = 'https://corsproxy.io/?' + encodeURIComponent(fullTarget);
+      opts.headers['X-Api-Key'] = apiKey;
+      break;
+    case 'allorigins':
+      fetchUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(fullTarget);
+      opts.headers['X-Api-Key'] = apiKey;
+      break;
+    default:
+      fetchUrl = fullTarget;
+      opts.headers['X-Api-Key'] = apiKey;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  opts.signal = controller.signal;
+
+  try {
+    const res = await fetch(fetchUrl, opts);
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.items) throw new Error('Invalid response format');
+    return data;
+  } catch(e) {
+    clearTimeout(timeout);
+    throw e;
+  }
+}
+
+// Auto-detect the best working connection strategy
+async function detectStrategy(apiKey) {
+  const strategies = ['local', 'corsproxy', 'allorigins', 'direct'];
+  const labels = { local: 'Local server (localhost:3001)', corsproxy: 'corsproxy.io', allorigins: 'allorigins.win', direct: 'Direct connection' };
+  const testPath = buildFathomUrl('/meetings', {});
+
+  for (const s of strategies) {
+    setProgress(`Trying ${labels[s]}...`);
+    try {
+      await tryFetch(s, testPath, apiKey);
+      setProgress(`Connected via ${labels[s]}`);
+      return s;
+    } catch(e) {
+      setProgress(`${labels[s]} failed, trying next...`);
+    }
+  }
+  throw new Error('All connection methods failed. Use the "Load JSON File" option instead — run start-server.bat for the best experience.');
+}
+
+async function fathomAPI(endpoint, params = {}) {
+  const apiPath = buildFathomUrl(endpoint, params);
+  return tryFetch(STATE.strategy, apiPath, STATE.apiKey);
+}
+
+async function fetchAllMeetings() {
+  let all = [], cursor = null, page = 0;
+  do {
+    showLoading(`Fetching meetings (page ${++page})...`);
+    const params = { include_transcript: 'true', include_summary: 'true', include_action_items: 'true' };
+    if (cursor) params.cursor = cursor;
+    const data = await fathomAPI('/meetings', params);
+    all = all.concat(data.items || []);
+    cursor = data.next_cursor || null;
+  } while (cursor && page < 1); // TODO: change back to 20 to load all pages
+  return all;
+}
+
+// ═══════ CONNECT ═══════
+async function connectToFathom() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { showConnectError('Please enter your Fathom API key.'); return; }
+  hideConnectError();
+  STATE.apiKey = key;
+  STATE.isDemo = false;
+
+  try {
+    // Auto-detect best connection strategy
+    showLoading('Detecting connection method...');
+    STATE.strategy = await detectStrategy(key);
+
+    // Fetch all meetings with pagination
+    STATE.meetings = await fetchAllMeetings();
+    STATE.topics = []; // Topics are synthesized on-demand via Perplexity
+    STATE.topicsUnlocked = false;
+
+    // Save to localStorage for faster reload
+    try { localStorage.setItem('fathom_cache', JSON.stringify({ ts: Date.now(), meetings: STATE.meetings })); } catch(e) {}
+
+    hideLoading();
+    enterApp();
+  } catch (e) {
+    hideLoading();
+    showConnectError(e.message);
+  }
+}
+
+function loadFromFile(file) {
+  if (!file) return;
+  showLoading('Loading from file...');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let data = JSON.parse(e.target.result);
+      // Support both raw array and {items:[]} format
+      if (data.items) data = data.items;
+      if (!Array.isArray(data)) throw new Error('Invalid format');
+      STATE.meetings = data;
+      STATE.isDemo = false;
+      STATE.strategy = 'file';
+      STATE.topics = [];
+      STATE.topicsUnlocked = false;
+      hideLoading();
+      enterApp();
+    } catch(err) {
+      hideLoading();
+      showConnectError('Invalid JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setProgress(msg) {
+  const el = document.getElementById('connectProgress');
+  if (el) { el.style.display = 'block'; el.textContent = msg; }
+}
+
+function hideConnectError() {
+  document.getElementById('connectError').style.display = 'none';
+}
+
+function loadDemoData() {
+  STATE.isDemo = true;
+  STATE.meetings = generateDemoMeetings();
+  STATE.topics = [];
+  STATE.topicsUnlocked = false;
+  enterApp();
+}
+
+function disconnect() {
+  STATE = { apiKey:'', perplexityKey:'', strategy:'', meetings:[], topics:[], topicsUnlocked:false, currentView:'meetings', isDemo:false };
+  try { localStorage.removeItem('fathom_cache'); sessionStorage.removeItem('llm_topics'); } catch(e) {}
+  document.getElementById('sidebar').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('connectScreen').classList.remove('hidden');
+}
+
+function enterApp() {
+  document.getElementById('connectScreen').classList.add('hidden');
+  document.getElementById('sidebar').classList.remove('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('meetingCount').textContent = STATE.meetings.length;
+  document.getElementById('topicCount').textContent = STATE.topics.length;
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  const stratLabels = { local:'Local Server', corsproxy:'corsproxy.io', allorigins:'allorigins.win', direct:'Direct', file:'File' };
+  dot.className = 'dot ' + (STATE.isDemo ? 'dot-yellow' : 'dot-green');
+  txt.textContent = STATE.isDemo ? 'Demo Mode' : ('Connected' + (STATE.strategy ? ' via ' + (stratLabels[STATE.strategy]||STATE.strategy) : ''));
+  showView('meetings');
+}
+
+async function refreshData() {
+  if (STATE.isDemo) return;
+  try {
+    showLoading('Refreshing...');
+    STATE.meetings = await fetchAllMeetings();
+    STATE.topics = [];
+    STATE.topicsUnlocked = false;
+    try { sessionStorage.removeItem('llm_topics'); } catch(e) {}
+    hideLoading();
+    document.getElementById('meetingCount').textContent = STATE.meetings.length;
+    document.getElementById('topicCount').textContent = '?';
+    showView(STATE.currentView);
+  } catch(e) { hideLoading(); alert('Refresh failed: ' + e.message); }
+}
+
+// ═══════ TOPIC EXTRACTION (LLM-POWERED) ═══════
+
+// Chunk transcript into time-windowed segments
+function chunkTranscript(transcript, meeting) {
+  const chunks = [];
+  const CHUNK_SIZE = 5;
+  for (let i = 0; i < transcript.length; i += CHUNK_SIZE) {
+    const slice = transcript.slice(i, i + CHUNK_SIZE);
+    chunks.push({
+      meetingId: meeting.recording_id,
+      meetingTitle: meeting.title || meeting.meeting_title || 'Untitled',
+      meetingUrl: meeting.share_url || meeting.url || '',
+      meetingDate: meeting.recording_start_time || meeting.created_at,
+      startTime: slice[0]?.timestamp || '00:00:00',
+      endTime: slice[slice.length-1]?.timestamp || '00:00:00',
+      text: slice.map(l => l.text).join(' '),
+      speakers: [...new Set(slice.map(l => l.speaker?.display_name).filter(Boolean))],
+      lines: slice
+    });
+  }
+  return chunks;
+}
+
+// Build meeting summaries for the LLM prompt
+function buildMeetingSummariesForPrompt() {
+  return STATE.meetings.map(m => {
+    const title = m.title || m.meeting_title || 'Untitled';
+    const date = new Date(m.recording_start_time || m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const summary = m.default_summary?.markdown_formatted || '';
+    const participants = (m.calendar_invitees || []).map(p => p.name || p.email).filter(Boolean).join(', ');
+    // Include first ~40 transcript lines as context if no summary
+    let transcriptExcerpt = '';
+    if (!summary && m.transcript && m.transcript.length) {
+      transcriptExcerpt = m.transcript.slice(0, 40).map(l => `${l.speaker?.display_name || ''}: ${l.text}`).join('\n');
+    }
+    return `MEETING: "${title}" | Date: ${date} | ID: ${m.recording_id} | Participants: ${participants}\n${summary ? 'SUMMARY:\n' + summary : 'TRANSCRIPT EXCERPT:\n' + transcriptExcerpt}`;
+  }).join('\n\n---\n\n');
+}
+
+// Call Perplexity API to synthesize topics
+async function synthesizeTopicsWithLLM(perplexityKey) {
+  const meetingContext = buildMeetingSummariesForPrompt();
+
+  const prompt = `You are analyzing meeting recordings from a professional services firm (Kaufman Rossin). Below are summaries or transcript excerpts from their meetings.
+
+Your task: Identify the distinct INITIATIVES, PROJECTS, and RECURRING THEMES discussed across these meetings. Do NOT just list keywords — synthesize actual topics that represent real work streams or decisions being made.
+
+For each topic:
+1. Give it a clear, descriptive name (e.g., "New Client Acceptance Automation", not "Salesforce Data")
+2. Write a 2-3 sentence description of what this initiative/theme is about
+3. List 5-10 specific searchable phrases that participants actually said when discussing this topic (exact quotes or near-exact phrases from the transcripts, not generic keywords)
+4. List which meeting IDs discuss this topic
+5. For each meeting, describe briefly what was said about this topic in that meeting
+
+Respond ONLY with valid JSON in this exact format (no markdown, no code fences):
+[
+  {
+    "name": "Topic Name",
+    "description": "2-3 sentence description of the initiative/theme",
+    "search_phrases": ["conflict check", "new client acceptance", "matter parties", "approval process", "closed won"],
+    "meetings": [
+      { "id": 12345, "relevance": "Brief description of what was discussed about this topic in this meeting" }
+    ]
+  }
+]
+
+Here are the meetings:
+
+${meetingContext}`;
+
+  const res = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + perplexityKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4000,
+      temperature: 0.1
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Perplexity API ${res.status}: ${err.substring(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  // Parse JSON from response (handle potential markdown wrapping)
+  let parsed;
+  try {
+    const jsonStr = content.replace(/^```json?\s*/i, '').replace(/```\s*$/, '').trim();
+    parsed = JSON.parse(jsonStr);
+  } catch (e) {
+    throw new Error('Failed to parse LLM response as JSON. Raw: ' + content.substring(0, 300));
+  }
+
+  if (!Array.isArray(parsed)) throw new Error('LLM response is not an array');
+  return parsed;
+}
+
+// Score how relevant a transcript chunk is to a topic
+function scoreChunkRelevance(chunkText, searchPhrases, topicName, topicDesc) {
+  const text = chunkText.toLowerCase();
+  let score = 0;
+
+  // Score exact phrase matches (highest weight)
+  (searchPhrases || []).forEach(phrase => {
+    const p = phrase.toLowerCase();
+    // Count occurrences of each phrase
+    let idx = 0;
+    while ((idx = text.indexOf(p, idx)) !== -1) {
+      score += 10;
+      idx += p.length;
+    }
+  });
+
+  // Score individual words from topic name and description (lower weight)
+  const topicWords = (topicName + ' ' + topicDesc).toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 3);
+  const uniqueWords = [...new Set(topicWords)];
+  uniqueWords.forEach(w => {
+    if (text.includes(w)) score += 1;
+  });
+
+  return score;
+}
+
+// Convert LLM topics into the app's topic format with relevant transcript segments
+function mapLLMTopicsToSegments(llmTopics) {
+  // Pre-chunk all transcripts
+  const allChunks = {};
+  STATE.meetings.forEach(m => {
+    if (m.transcript && m.transcript.length) {
+      allChunks[m.recording_id] = chunkTranscript(m.transcript, m);
+    }
+  });
+
+  return llmTopics.map((lt, idx) => {
+    const segments = [];
+    const videoIds = [];
+    const searchPhrases = lt.search_phrases || [];
+
+    (lt.meetings || []).forEach(ref => {
+      const mid = ref.id;
+      const chunks = allChunks[mid];
+      if (!chunks || !chunks.length) return;
+      videoIds.push(mid);
+
+      // Score every chunk in this meeting by relevance to this topic
+      const scored = chunks.map((c, i) => ({
+        chunk: c,
+        index: i,
+        score: scoreChunkRelevance(c.text, searchPhrases, lt.name || '', lt.description || '')
+      }));
+
+      // Sort by score descending, take top chunks that actually matched
+      scored.sort((a, b) => b.score - a.score);
+      const relevant = scored.filter(s => s.score > 0).slice(0, 5);
+
+      // If no chunks scored, fall back to the middle of the meeting (skip intro/outro)
+      if (relevant.length === 0) {
+        const mid3 = Math.floor(chunks.length / 3);
+        relevant.push({ chunk: chunks[mid3], score: 0 });
+      }
+
+      // Sort selected chunks by their original order (timeline)
+      relevant.sort((a, b) => a.index - b.index);
+      relevant.forEach(s => {
+        segments.push({ ...s.chunk, relevance: ref.relevance || '', relevanceScore: s.score });
+      });
+    });
+
+    return {
+      id: idx,
+      name: lt.name || 'Unnamed Topic',
+      description: lt.description || '',
+      keyTerms: searchPhrases,
+      segments: segments,
+      videoCount: [...new Set(videoIds)].length,
+      videoIds: [...new Set(videoIds)],
+      color: TOPIC_COLORS[idx % TOPIC_COLORS.length],
+      _raw: lt // keep raw LLM output for project generation later
+    };
+  }).filter(t => t.segments.length > 0);
+}
+
+// Main entry point: unlock topics with Perplexity key
+async function unlockTopics() {
+  const keyInput = document.getElementById('perplexityKeyInput');
+  const key = keyInput ? keyInput.value.trim() : '';
+  if (!key) { alert('Please enter your Perplexity API key.'); return; }
+
+  STATE.perplexityKey = key;
+  const container = document.getElementById('topicsContainer');
+  const stats = document.getElementById('topicStats');
+  stats.innerHTML = '';
+  container.innerHTML = '<div style="text-align:center;padding:3rem"><div class="loading-inline"></div><div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-top:1rem">Analyzing meetings with AI...</div><div style="font-size:14px;color:var(--text-light);margin-top:.5rem">Synthesizing themes from meeting summaries</div></div>';
+
+  try {
+    const llmTopics = await synthesizeTopicsWithLLM(key);
+    STATE.topics = mapLLMTopicsToSegments(llmTopics);
+    STATE.topicsUnlocked = true;
+    STATE.projectDocs = {}; // keyed by topic id
+    document.getElementById('topicCount').textContent = STATE.topics.length;
+    // Cache results
+    try { sessionStorage.setItem('llm_topics', JSON.stringify(STATE.topics)); } catch(e) {}
+    populateProjectsSidebar();
+    renderTopicsGrid();
+  } catch (e) {
+    container.innerHTML = `<div class="callout danger" style="margin:2rem 0"><strong>Theme synthesis failed:</strong> ${esc(e.message)}<br><br>Check your Perplexity API key and try again.</div>`;
+  }
+}
+
+// ═══════ PROJECTS + TOPICS ═══════
+
+function populateProjectsSidebar() {
+  const container = document.getElementById('projectsNavItems');
+  if (!STATE.topics.length) {
+    container.innerHTML = `<button onclick="showView('topics')" style="color:var(--green);font-size:.65rem;letter-spacing:.08em">
+      <span class="icon">&#9889;</span> Unlock with AI &rarr;
+    </button>`;
+    return;
+  }
+
+  container.innerHTML = STATE.topics.map(t =>
+    `<button onclick="showView('project-${t.id}')" data-view="project-${t.id}">
+      <span style="display:inline-block;width:8px;height:8px;background:${t.color};flex-shrink:0"></span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.name)}</span>
+    </button>`
+  ).join('');
+}
+
+function renderProjectPage(topicId) {
+  const t = STATE.topics.find(x => x.id === topicId);
+  if (!t) return;
+  const panel = document.getElementById('view-project');
+  const docs = STATE.projectDocs?.[topicId];
+  const hasDocs = !!docs;
+
+  // Build the overview tab (reuse topic detail logic)
+  const overviewHtml = buildTopicOverviewHtml(t);
+
+  // Build artifact tabs
+  const artifactTabs = ['prep', 'brief', 'roadmap', 'security', 'pipeline', 'process'];
+  const artifactLabels = { prep:'Meeting Prep', brief:'Product Brief', roadmap:'Roadmap', security:'Security', pipeline:'Data Pipeline', process:'Process' };
+
+  const tabButtons = `
+    <div class="proj-tabs">
+      <button class="proj-tab active" onclick="switchProjTab(this,'ptab-overview-${topicId}')">Overview</button>
+      ${artifactTabs.map(a => `<button class="proj-tab" onclick="switchProjTab(this,'ptab-${a}-${topicId}')">${artifactLabels[a]}</button>`).join('')}
+    </div>`;
+
+  const overviewTab = `<div class="proj-tab-content active" id="ptab-overview-${topicId}">${overviewHtml}</div>`;
+
+  const artifactContent = artifactTabs.map(a => {
+    const content = hasDocs && docs[a]
+      ? `<div class="proj-artifact">${simpleMarkdown(docs[a])}</div>`
+      : `<div class="proj-gen-banner">
+          <h4>${artifactLabels[a]}</h4>
+          <p>Generate AI-powered ${artifactLabels[a].toLowerCase()} for this initiative using meeting context.</p>
+          <button class="btn btn-primary" onclick="generateProjectDocs(${topicId})">Generate All Project Docs</button>
+        </div>`;
+    return `<div class="proj-tab-content" id="ptab-${a}-${topicId}">${content}</div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div style="margin-bottom:1.5rem">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
+        <span style="display:inline-block;width:16px;height:16px;background:${t.color}"></span>
+        <h2 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin:0">${esc(t.name)}</h2>
+      </div>
+      ${t.description ? `<p style="font-size:15px;color:var(--text-light);line-height:1.6;max-width:700px">${esc(t.description)}</p>` : ''}
+      <div style="margin-top:.5rem;display:flex;gap:1rem;font-size:14px;color:var(--text-light)">
+        <span><strong>${t.videoCount}</strong> meeting${t.videoCount!==1?'s':''}</span>
+        <span><strong>${t.segments.length}</strong> transcript segments</span>
+        ${hasDocs ? '<span class="tag tag-green">Docs Generated</span>' : ''}
+      </div>
+    </div>
+    ${tabButtons}
+    ${overviewTab}
+    ${artifactContent}
+  `;
+}
+
+function switchProjTab(btn, contentId) {
+  const tabs = btn.parentElement;
+  const parent = tabs.parentElement;
+  tabs.querySelectorAll('.proj-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  parent.querySelectorAll('.proj-tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(contentId).classList.add('active');
+}
+
+function buildTopicOverviewHtml(t) {
+  // Group segments by meeting (same logic as showTopicDetail)
+  const byMeeting = {};
+  t.segments.forEach(s => {
+    if (!byMeeting[s.meetingId]) byMeeting[s.meetingId] = { title: s.meetingTitle, url: s.meetingUrl, date: s.meetingDate, relevance: s.relevance || '', segments: [] };
+    byMeeting[s.meetingId].segments.push(s);
+  });
+
+  let html = '';
+  Object.entries(byMeeting).forEach(([mid, group]) => {
+    const date = new Date(group.date);
+    html += `<div class="segment-card" style="margin-bottom:1rem">
+      <div class="segment-header">
+        <div>
+          <div class="video-title" style="cursor:pointer" onclick="showMeetingDetail(${mid})">${esc(group.title)}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+        </div>
+        ${group.url && group.url !== '#' ? `<a href="${group.url}" target="_blank" class="segment-link" style="margin:0">Watch on Fathom &#8594;</a>` : ''}
+      </div>
+      <div class="segment-body">
+        ${group.relevance ? `<div class="segment-description" style="border-left:3px solid var(--green);padding-left:12px;margin-bottom:1rem">${esc(group.relevance)}</div>` : ''}
+        <details>
+          <summary style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:4px 0">Transcript Excerpts (${group.segments.length})</summary>
+          <div style="margin-top:.5rem">
+            ${group.segments.map(s => {
+              const lines = (s.lines||[]).map(l =>
+                `<div><span class="timestamp">${l.timestamp||''}</span> <span class="speaker">${esc(l.speaker?.display_name||'')}</span>: ${esc(l.text)}</div>`
+              ).join('');
+              return `<div class="segment-transcript" style="margin-bottom:.5rem"><div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">${s.startTime} &ndash; ${s.endTime}</div>${lines}</div>`;
+            }).join('')}
+          </div>
+        </details>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+async function generateProjectDocs(topicId) {
+  const t = STATE.topics.find(x => x.id === topicId);
+  if (!t) return;
+  if (!STATE.perplexityKey) { alert('Perplexity API key not set. Go to Topics Index to enter it.'); return; }
+
+  // Gather transcript context for this topic
+  const meetingContext = t.segments.map(s => {
+    return `[Meeting: "${s.meetingTitle}" | ${s.startTime}–${s.endTime}]\n${s.lines ? s.lines.map(l => (l.speaker?.display_name||'') + ': ' + l.text).join('\n') : s.text}`;
+  }).join('\n\n---\n\n');
+
+  // Also gather brief context from OTHER themes so the prep notes are holistic
+  const otherThemes = STATE.topics.filter(x => x.id !== topicId).map(x =>
+    `- "${x.name}": ${x.description || 'No description'}`
+  ).join('\n');
+
+  // Gather action items and summaries from all meetings for broader context
+  const allMeetingSummaries = STATE.meetings.map(m => {
+    const title = m.title || m.meeting_title || 'Untitled';
+    const date = new Date(m.recording_start_time || m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const summary = m.default_summary?.markdown_formatted || '';
+    return summary ? `[${title} — ${date}]\n${summary.substring(0, 400)}` : '';
+  }).filter(Boolean).join('\n\n');
+
+  const prompt = `You are a product manager at Kaufman Rossin, a professional services firm. Based on the following meeting transcript excerpts about the initiative "${t.name}", generate 6 project artifacts.
+
+INITIATIVE: ${t.name}
+DESCRIPTION: ${t.description || 'See transcripts below.'}
+MEETINGS INVOLVED: ${t.videoCount} meetings, ${t.segments.length} transcript segments
+
+OTHER ACTIVE INITIATIVES (for context — these are the other themes being worked on across the team):
+${otherThemes}
+
+BROADER MEETING CONTEXT (summaries from all recent meetings):
+${allMeetingSummaries.substring(0, 3000)}
+
+TRANSCRIPT EXCERPTS FOR THIS INITIATIVE:
+${meetingContext}
+
+Generate these 6 artifacts. Use markdown formatting. Be specific to what was actually discussed — do not invent details not present in the transcripts.
+
+ARTIFACT 1 — "prep" (Meeting Prep Notes):
+This is for the product manager to prepare for their next meeting on this initiative. Include ALL of the following sections:
+- "## Emails to Send" — specific emails that need to be drafted and sent. For each: who it goes to, the subject/purpose, and what information or ask it should contain. Example: "Email Melissa Caban requesting conflict check sandbox screenshots and matter-party field structure comparison."
+- "## Conversations to Have" — informal 1:1 or small-group conversations needed before the next meeting. Who to talk to, what to ask or align on, and why it can't wait for the meeting.
+- "## Hard Action Items" — concrete deliverables or tasks that must be completed. For each: owner (by name), what exactly needs to be done, and what it unblocks. Format as a checklist.
+- "## Discussion Topics for Next Meeting" — questions that need answers, decisions that need to be made, blockers to resolve, and any cross-initiative dependencies with the other active themes listed above.
+- "## Suggested Attendees" — who should be in the next meeting based on the open items, and why each person is needed.
+Be extremely specific and actionable. Reference real people by name, real systems, and real decisions from the transcripts. Do not be vague.
+
+ARTIFACTS 2-6 — Standard project docs (brief, roadmap, security, pipeline, process).
+
+IMPORTANT — MERMAID DIAGRAM RULES (pipeline and process):
+- Use Mermaid diagram syntax inside a fenced code block marked with \`\`\`mermaid
+- For pipeline: use graph LR (left to right). For process: use graph TD (top down).
+- CRITICAL FORMATTING: Define ALL nodes FIRST with their labels, THEN write edges using ONLY the IDs (no brackets on edges). Example:
+
+CORRECT:
+\`\`\`mermaid
+graph LR
+  sf[Salesforce]
+  sql[SQL Server]
+  star[STAR]
+  sf -->|DbAmp| sql
+  sql --> star
+  star -->|sync| sf
+\`\`\`
+
+WRONG (causes duplicate labels):
+\`\`\`mermaid
+graph LR
+  sf[Salesforce] -->|DbAmp| sql[SQL Server]
+  sql[SQL Server] --> star[STAR]
+\`\`\`
+
+- Use short labels (1-4 words). Use edge labels for methods/protocols.
+- Use simple short IDs: sf, sql, star, adf, mcp, wes, etc.
+- For decisions use {Decision Text} syntax.
+- Keep diagrams to 5-12 nodes max. Put extra detail in the markdown text.
+
+RESPOND WITH VALID JSON ONLY (no markdown fences around the JSON itself):
+{
+  "prep": "## Action Items Before Next Meeting\\n...\\n## Discussion Topics for Next Meeting\\n...\\n## Suggested Attendees\\n...",
+  "brief": "## Problem\\n...\\n## Target User\\n...\\n## User Stories\\n...\\n## Success Metrics\\n...\\n## Risks\\n...",
+  "roadmap": "## P0 — Must Do\\n...\\n## P1 — Should Do\\n...\\n## P2 — Nice to Have\\n...",
+  "security": "## Security Considerations\\n...\\n## Risks\\n...\\n## Recommendations\\n...",
+  "pipeline": "## Data Flow\\n\\nDescription...\\n\\n\`\`\`mermaid\\ngraph LR\\n  sf[Salesforce]\\n  sql[SQL Server]\\n  star[STAR]\\n  sf -->|DbAmp| sql\\n  sql --> star\\n\`\`\`\\n\\n## Key Integration Points\\n...",
+  "process": "## Process Flow\\n\\nDescription...\\n\\n\`\`\`mermaid\\ngraph TD\\n  start[Step 1]\\n  decide{Decision}\\n  yes[Step 2]\\n  no[Step 3]\\n  start --> decide\\n  decide -->|Yes| yes\\n  decide -->|No| no\\n\`\`\`\\n\\n## Notes\\n..."
+}
+
+Each value should be a complete markdown document. Be thorough but grounded in what was actually said.`;
+
+  // Show loading state in all artifact tabs
+  const loadLabels = { prep:'meeting prep', brief:'product brief', roadmap:'roadmap', security:'security eval', pipeline:'data pipeline', process:'process flow' };
+  const allTabs = ['prep', 'brief', 'roadmap', 'security', 'pipeline', 'process'];
+  allTabs.forEach(a => {
+    const el = document.getElementById(`ptab-${a}-${topicId}`);
+    if (el) el.innerHTML = '<div style="text-align:center;padding:2rem"><div class="loading-inline"></div><div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-top:1rem">Generating ' + (loadLabels[a]||a) + '...</div></div>';
+  });
+
+  try {
+    const res = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + STATE.perplexityKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 8000,
+        temperature: 0.1
+      })
+    });
+
+    if (!res.ok) throw new Error(`Perplexity API ${res.status}`);
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const jsonStr = content.replace(/^```json?\s*/i, '').replace(/```\s*$/, '').trim();
+    const docs = JSON.parse(jsonStr);
+
+    STATE.projectDocs[topicId] = docs;
+    try { sessionStorage.setItem('project_docs', JSON.stringify(STATE.projectDocs)); } catch(e) {}
+
+    // Re-render the project page with the generated docs
+    renderProjectPage(topicId);
+  } catch (e) {
+    artifactTabs.forEach(a => {
+      const el = document.getElementById(`ptab-${a}-${topicId}`);
+      if (el) el.innerHTML = `<div class="callout danger"><strong>Generation failed:</strong> ${esc(e.message)}</div>`;
+    });
+  }
+}
+
+// ═══════ RENDERING ═══════
+function showView(view) {
+  STATE.currentView = view;
+  document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.sidebar-nav button').forEach(el => el.classList.remove('active'));
+  const btn = document.querySelector(`[data-view="${view}"]`);
+  if (btn) btn.classList.add('active');
+
+  const titles = { meetings:'All Meetings', topics:'Themes Index', graph3d:'Knowledge Graph' };
+
+  // Handle project-N views
+  if (view.startsWith('project-')) {
+    const topicId = parseInt(view.replace('project-', ''));
+    const topic = STATE.topics.find(t => t.id === topicId);
+    document.getElementById('viewTitle').textContent = topic ? topic.name : 'Project';
+    document.getElementById('view-project').classList.remove('hidden');
+    renderProjectPage(topicId);
+    return;
+  }
+
+  document.getElementById('viewTitle').textContent = titles[view] || view;
+  const panel = document.getElementById('view-' + view);
+  if (panel) panel.classList.remove('hidden');
+
+  if (view === 'meetings') renderMeetings();
+  else if (view === 'topics') renderTopics();
+  else if (view === 'graph3d') renderGraph3D();
+}
+
+function renderMeetings() {
+  const stats = document.getElementById('meetingStats');
+  const totalDur = STATE.meetings.reduce((sum, m) => {
+    const s = new Date(m.recording_start_time), e = new Date(m.recording_end_time);
+    return sum + (e - s) / 60000;
+  }, 0);
+  const uniqueParticipants = new Set();
+  STATE.meetings.forEach(m => (m.calendar_invitees||[]).forEach(p => uniqueParticipants.add(p.email||p.name)));
+
+  const topicCta = STATE.topicsUnlocked
+    ? `<div class="stat-card" style="border-left-color:var(--blue);cursor:pointer" onclick="showView('topics')"><div class="label">Themes</div><div class="value">${STATE.topics.length}</div><div class="sub" style="color:var(--green-text)">View themes &rarr;</div></div>`
+    : `<div class="stat-card" style="border-left-color:var(--green);background:linear-gradient(135deg,var(--green-10),white);cursor:pointer" onclick="showView('topics')"><div class="label" style="color:var(--green-text)">AI Theme Analysis</div><div class="value" style="font-size:1rem;color:var(--blue)">Unlock Themes</div><div class="sub">Synthesize initiatives across ${STATE.meetings.length} meetings with AI</div></div>`;
+
+  stats.innerHTML = `
+    <div class="stat-card"><div class="label">Total Meetings</div><div class="value">${STATE.meetings.length}</div></div>
+    <div class="stat-card"><div class="label">Total Duration</div><div class="value">${Math.round(totalDur)} min</div><div class="sub">${(totalDur/60).toFixed(1)} hours</div></div>
+    <div class="stat-card"><div class="label">Unique Participants</div><div class="value">${uniqueParticipants.size}</div></div>
+    ${topicCta}
+  `;
+
+  const container = document.getElementById('meetingsTableContainer');
+  if (!STATE.meetings.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">&#128197;</div><h3>No meetings found</h3><p>Your Fathom meetings will appear here once synced.</p></div>';
+    return;
+  }
+
+  const sorted = [...STATE.meetings].sort((a,b) => new Date(b.recording_start_time||b.created_at) - new Date(a.recording_start_time||a.created_at));
+  let html = '<table class="data-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Duration</th><th>Participants</th><th>Topics</th></tr></thead><tbody>';
+  sorted.forEach(m => {
+    const start = new Date(m.recording_start_time || m.created_at);
+    const end = new Date(m.recording_end_time || m.created_at);
+    const dur = Math.round((end - start) / 60000);
+    const participants = (m.calendar_invitees||[]).map(p => p.name || p.email || '').filter(Boolean).join(', ') || 'N/A';
+    const mTopics = STATE.topics.filter(t => t.videoIds.includes(m.recording_id));
+    const topicTags = mTopics.slice(0,3).map(t => `<span class="tag" style="background:${t.color}20;color:${t.color};border:1px solid ${t.color}40">${t.name.split(',')[0]}</span>`).join(' ');
+    html += `<tr onclick="showMeetingDetail(${m.recording_id})">
+      <td class="title-cell">${esc(m.title || m.meeting_title || 'Untitled')}</td>
+      <td class="date-cell">${start.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+      <td class="date-cell">${start.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</td>
+      <td class="duration-cell">${dur} min</td>
+      <td class="participants-cell">${esc(participants)}</td>
+      <td>${topicTags || '<span style="color:var(--text-muted);font-size:.8rem">—</span>'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function showMeetingDetail(recordingId) {
+  const m = STATE.meetings.find(x => x.recording_id === recordingId);
+  if (!m) return;
+  document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+  const panel = document.getElementById('view-meeting-detail');
+  panel.classList.remove('hidden');
+  document.getElementById('viewTitle').textContent = m.title || 'Meeting Detail';
+
+  const start = new Date(m.recording_start_time || m.created_at);
+  const end = new Date(m.recording_end_time || m.created_at);
+  const dur = Math.round((end - start) / 60000);
+  const participants = (m.calendar_invitees||[]).map(p => p.name || p.email).filter(Boolean);
+  const summaryHtml = m.default_summary?.markdown_formatted ? simpleMarkdown(m.default_summary.markdown_formatted) : '<em style="color:var(--text-muted)">No summary available</em>';
+
+  let transcriptHtml = '';
+  if (m.transcript && m.transcript.length) {
+    transcriptHtml = m.transcript.map(l => `<div class="transcript-line"><span class="ts">${l.timestamp||''}</span><span class="spk">${esc(l.speaker?.display_name||'')}</span><span class="txt">${esc(l.text)}</span></div>`).join('');
+  }
+
+  const mTopics = STATE.topics.filter(t => t.videoIds.includes(m.recording_id));
+  const topicTags = mTopics.map(t => `<span class="tag" style="background:${t.color}20;color:${t.color};border:1px solid ${t.color}40;cursor:pointer" onclick="showTopicDetail(${t.id})">${t.name}</span>`).join(' ');
+
+  panel.innerHTML = `
+    <div class="meeting-detail-header">
+      <div>
+        <h2><button class="back-btn" onclick="showView('meetings')">&larr;</button> ${esc(m.title || 'Untitled')}</h2>
+        <div class="meeting-meta-row">
+          <span>${start.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</span>
+          <span>${start.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})} &ndash; ${end.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})} (${dur} min)</span>
+          <span>${participants.length} participant${participants.length!==1?'s':''}</span>
+        </div>
+        ${topicTags ? '<div style="margin-top:.5rem">'+topicTags+'</div>' : ''}
+      </div>
+      ${m.share_url ? `<a href="${m.share_url}" target="_blank" class="btn btn-primary btn-sm">&#9654; Watch on Fathom</a>` : ''}
+    </div>
+    <div class="meeting-summary-card"><h3>AI Summary</h3><div class="summary-content">${summaryHtml}</div></div>
+    ${m.action_items && m.action_items.length ? `<div class="meeting-summary-card"><h3>Action Items</h3><ul>${m.action_items.map(a => `<li>${esc(typeof a==='string'?a:a.text||JSON.stringify(a))}</li>`).join('')}</ul></div>` : ''}
+    <div class="transcript-panel"><h3>Full Transcript (${(m.transcript||[]).length} segments)</h3><div class="transcript-body">${transcriptHtml || '<em style="color:var(--text-muted)">No transcript available</em>'}</div></div>
+  `;
+}
+
+function renderTopics() {
+  const stats = document.getElementById('topicStats');
+  const container = document.getElementById('topicsContainer');
+
+  // Check if topics already unlocked
+  if (STATE.topicsUnlocked && STATE.topics.length) {
+    renderTopicsGrid();
+    return;
+  }
+
+  // Check session cache
+  try {
+    const cached = sessionStorage.getItem('llm_topics');
+    if (cached) {
+      STATE.topics = JSON.parse(cached);
+      STATE.topicsUnlocked = true;
+      STATE.projectDocs = STATE.projectDocs || {};
+      document.getElementById('topicCount').textContent = STATE.topics.length;
+      populateProjectsSidebar();
+      renderTopicsGrid();
+      return;
+    }
+  } catch(e) {}
+
+  // Show unlock screen
+  stats.innerHTML = '';
+  container.innerHTML = `
+    <div style="text-align:center;padding:4rem 2rem;max-width:480px;margin:0 auto">
+      <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.3">&#128218;</div>
+      <h3 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin-bottom:.5rem">Cross-Meeting Theme Analysis</h3>
+      <p style="font-size:15px;color:var(--text-light);line-height:1.6;margin-bottom:1.5rem">
+        This feature uses AI to synthesize themes and initiatives across your ${STATE.meetings.length} meetings.
+        Meeting summaries are sent to Perplexity's Sonar model to identify real work streams, not just keywords.
+        Each theme becomes a project with auto-generated briefs, roadmaps, and diagrams.
+      </p>
+      <div style="margin-bottom:1rem;text-align:left">
+        <label style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);display:block;margin-bottom:.4rem">Perplexity API Key</label>
+        <input type="password" id="perplexityKeyInput" placeholder="pplx-..." style="width:100%;padding:11px 14px;border:2px solid var(--gray-20);font-family:var(--fb);font-size:15px;color:var(--text)">
+        <div style="font-size:12px;color:var(--text-muted);margin-top:.3rem">Get a key at <strong>perplexity.ai/settings/api</strong></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="unlockTopics()">
+        Unlock Theme Analysis
+      </button>
+    </div>
+  `;
+}
+
+function renderTopicsGrid() {
+  const stats = document.getElementById('topicStats');
+  const container = document.getElementById('topicsContainer');
+  const totalSegs = STATE.topics.reduce((s,t) => s+t.segments.length, 0);
+  stats.innerHTML = `
+    <div class="stat-card"><div class="label">Themes</div><div class="value">${STATE.topics.length}</div></div>
+    <div class="stat-card"><div class="label">Segments</div><div class="value">${totalSegs}</div></div>
+    <div class="stat-card"><div class="label">Meetings</div><div class="value">${STATE.meetings.filter(m=>m.transcript&&m.transcript.length).length}</div></div>
+    <div class="stat-card"><div class="label">Cross-Meeting</div><div class="value">${STATE.topics.filter(t=>t.videoCount>1).length}</div><div class="sub">Spanning 2+ meetings</div></div>
+  `;
+
+  let html = '<div class="topics-grid">';
+  STATE.topics.forEach(t => {
+    const videoNames = t.videoIds.map(id => {
+      const m = STATE.meetings.find(x => x.recording_id === id);
+      return m ? (m.title || 'Untitled').substring(0, 30) : 'Unknown';
+    });
+    html += `<div class="topic-card" onclick="showTopicDetail(${t.id})">
+      <div class="topic-color" style="background:${t.color}"></div>
+      <h3>${esc(t.name)}</h3>
+      <div class="topic-meta">
+        <span>${t.videoCount} meeting${t.videoCount!==1?'s':''}</span>
+        <span>${t.segments.length} segment${t.segments.length!==1?'s':''}</span>
+      </div>
+      <div class="topic-videos">${videoNames.map(n => `<span class="video-tag">${esc(n)}</span>`).join('')}</div>
+      <div class="topic-summary">${esc(t.description || t.segments[0]?.text?.substring(0,180) || '')}${t.description ? '' : '...'}</div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function showTopicDetail(topicId) {
+  const t = STATE.topics.find(x => x.id === topicId);
+  if (!t) return;
+  document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+  const panel = document.getElementById('view-topic-detail');
+  panel.classList.remove('hidden');
+  document.getElementById('viewTitle').textContent = t.name;
+
+  // Group segments by meeting
+  const byMeeting = {};
+  t.segments.forEach(s => {
+    if (!byMeeting[s.meetingId]) byMeeting[s.meetingId] = { title: s.meetingTitle, url: s.meetingUrl, date: s.meetingDate, relevance: s.relevance || '', segments: [] };
+    byMeeting[s.meetingId].segments.push(s);
+  });
+
+  let segHtml = '';
+  Object.entries(byMeeting).forEach(([mid, group]) => {
+    const date = new Date(group.date);
+    // Show the AI-generated relevance description first, then transcript excerpts
+    segHtml += `<div class="segment-card">
+      <div class="segment-header">
+        <div>
+          <div class="video-title" style="cursor:pointer" onclick="showMeetingDetail(${mid})">${esc(group.title)}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+        </div>
+        ${group.url && group.url !== '#' ? `<a href="${group.url}" target="_blank" class="segment-link" style="margin:0">Watch on Fathom &#8594;</a>` : ''}
+      </div>
+      <div class="segment-body">
+        ${group.relevance ? `<div class="segment-description" style="border-left:3px solid var(--green);padding-left:12px;margin-bottom:1rem">${esc(group.relevance)}</div>` : ''}
+        <details style="margin-top:.5rem">
+          <summary style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:4px 0">Transcript Excerpts (${group.segments.length})</summary>
+          <div style="margin-top:.5rem">
+            ${group.segments.map(s => {
+              const lines = (s.lines||[]).map(l =>
+                `<div><span class="timestamp">${l.timestamp||''}</span> <span class="speaker">${esc(l.speaker?.display_name||'')}</span>: ${esc(l.text)}</div>`
+              ).join('');
+              return `<div class="segment-transcript" style="margin-bottom:.5rem"><div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">${s.startTime} &ndash; ${s.endTime}</div>${lines}</div>`;
+            }).join('')}
+          </div>
+        </details>
+      </div>
+    </div>`;
+  });
+
+  panel.innerHTML = `
+    <div class="topic-detail-header">
+      <h2><button class="back-btn" onclick="showView('topics')">&larr;</button> <span style="display:inline-block;width:14px;height:14px;background:${t.color};margin-right:.3rem"></span> ${esc(t.name)}</h2>
+      ${t.description ? `<p style="margin-top:.5rem;font-size:15px;color:var(--text-light);line-height:1.6;max-width:700px">${esc(t.description)}</p>` : ''}
+      <div style="margin-top:.5rem;display:flex;gap:1rem;font-size:14px;color:var(--text-light)">
+        <span><strong>${t.videoCount}</strong> meeting${t.videoCount!==1?'s':''}</span>
+        <span><strong>${t.segments.length}</strong> transcript segments</span>
+      </div>
+    </div>
+    <div class="segment-list">${segHtml}</div>
+  `;
+}
+
+// ═══════ 3D KNOWLEDGE GRAPH ═══════
+let graph3dInstance = null;
+let graphData = null;
+
+function getNodeColor(name, type) {
+  // People get white, themes get green, meetings use entity color registry for consistency with Mermaid
+  if (type === 'person') return '#ffffff';
+  if (type === 'theme') return '#aed136';
+  // Meetings: use the entity color system so "STAR", "Salesforce" etc match Mermaid
+  const c = getEntityColor(name);
+  return c.border; // use the border color (the saturated one)
+}
+
+function buildGraphData() {
+  const nodes = [];
+  const links = [];
+  const personSet = new Map();
+
+  STATE.meetings.forEach(m => {
+    const title = m.title || m.meeting_title || 'Untitled';
+    const date = new Date(m.recording_start_time || m.created_at);
+    nodes.push({
+      id: 'meeting-' + m.recording_id,
+      name: title.length > 35 ? title.substring(0, 35) + '...' : title,
+      fullName: title,
+      type: 'meeting',
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      color: getNodeColor(title, 'meeting'),
+      val: 6
+    });
+
+    // Gather people from invitees + transcript speakers
+    const people = new Set();
+    (m.calendar_invitees || []).forEach(p => { if (p.name) people.add(p.name); });
+    (m.transcript || []).forEach(l => { if (l.speaker?.display_name) people.add(l.speaker.display_name); });
+
+    people.forEach(name => {
+      const pid = 'person-' + name.toLowerCase().replace(/[^a-z]/g, '');
+      if (!personSet.has(name)) {
+        personSet.set(name, pid);
+        nodes.push({ id: pid, name: name, fullName: name, type: 'person', color: '#ffffff', val: 4 });
+      }
+      links.push({ source: personSet.get(name), target: 'meeting-' + m.recording_id, type: 'attended' });
+    });
+  });
+
+  if (STATE.topicsUnlocked && STATE.topics.length) {
+    STATE.topics.forEach(t => {
+      const tid = 'theme-' + t.id;
+      nodes.push({ id: tid, name: t.name, fullName: t.name, description: t.description || '', type: 'theme', color: '#aed136', val: 12 });
+
+      t.videoIds.forEach(mid => {
+        links.push({ source: tid, target: 'meeting-' + mid, type: 'discussed_in' });
+      });
+
+      const themePeople = new Set();
+      t.segments.forEach(s => {
+        (s.speakers || []).forEach(n => { if (personSet.has(n)) themePeople.add(n); });
+        (s.lines || []).forEach(l => { const n = l.speaker?.display_name; if (n && personSet.has(n)) themePeople.add(n); });
+      });
+      themePeople.forEach(name => {
+        links.push({ source: tid, target: personSet.get(name), type: 'involves' });
+      });
+    });
+  }
+
+  return { nodes, links };
+}
+
+function renderGraph3D() {
+  const container = document.getElementById('graph3d-container');
+  if (!container) return;
+
+  // Wait a frame so the panel is visible and has dimensions
+  requestAnimationFrame(() => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if (w < 10 || h < 10) {
+      // Panel might still be hidden; retry
+      setTimeout(renderGraph3D, 100);
+      return;
+    }
+
+    graphData = buildGraphData();
+    if (!graphData.nodes.length) return;
+
+    // Clear previous
+    if (graph3dInstance) {
+      try { graph3dInstance._destructor(); } catch(e) {}
+      graph3dInstance = null;
+    }
+    // Remove old canvases but keep overlay UI
+    container.querySelectorAll('canvas, .scene-container, .force-graph-container').forEach(el => el.remove());
+    // Also remove any divs that ForceGraph3D injected
+    [...container.children].forEach(el => {
+      if (!el.id || !el.id.startsWith('graph3d-')) el.remove();
+    });
+
+    try {
+      graph3dInstance = ForceGraph3D()(container)
+        .graphData(graphData)
+        .backgroundColor('#3c3c3c')
+        .width(w)
+        .height(h)
+        .nodeColor(n => n.color)
+        .nodeVal(n => n.val)
+        .nodeLabel('')
+        .nodeOpacity(0.92)
+        .nodeResolution(16)
+        .linkColor(l => {
+          if (l.type === 'discussed_in') return 'rgba(174,209,54,0.4)';
+          if (l.type === 'involves') return 'rgba(174,209,54,0.2)';
+          return 'rgba(119,148,188,0.25)';
+        })
+        .linkWidth(l => l.type === 'discussed_in' ? 2 : 0.6)
+        .linkOpacity(0.7)
+        .nodeThreeObject(node => {
+          const group = new THREE.Group();
+          const radius = node.type === 'theme' ? 6 : node.type === 'meeting' ? 4 : 3;
+          const geo = new THREE.SphereGeometry(radius, 16, 16);
+          const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(node.color), transparent: true, opacity: 0.92 });
+          group.add(new THREE.Mesh(geo, mat));
+
+          // Label sprite
+          const cvs = document.createElement('canvas');
+          const ctx = cvs.getContext('2d');
+          const fs = node.type === 'theme' ? 26 : 18;
+          cvs.width = 512; cvs.height = 64;
+          ctx.font = (node.type === 'theme' ? '700' : '400') + ' ' + fs + 'px Montserrat, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = node.type === 'theme' ? '#aed136' : node.type === 'person' ? 'rgba(255,255,255,0.85)' : 'rgba(119,148,188,0.9)';
+          ctx.fillText(node.name, 256, 42);
+          const tex = new THREE.CanvasTexture(cvs);
+          const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+          spr.scale.set(38, 5, 1);
+          spr.position.set(0, radius + 3, 0);
+          group.add(spr);
+          return group;
+        })
+        .onNodeClick(node => showGraphDetail(node))
+        .d3Force('charge').strength(n => n.type === 'theme' ? -200 : -60);
+
+      // Lights
+      const scene = graph3dInstance.scene();
+      scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+      const dl = new THREE.DirectionalLight(0xffffff, 0.35);
+      dl.position.set(100, 100, 100);
+      scene.add(dl);
+    } catch(e) {
+      console.error('Graph3D init error:', e);
+      container.querySelector('#graph3d-info').textContent = 'Error initializing 3D graph: ' + e.message;
+    }
+  });
+}
+
+function showGraphDetail(node) {
+  const detail = document.getElementById('graph3d-detail');
+  if (!detail) return;
+  let html = '';
+
+  if (node.type === 'theme') {
+    const t = STATE.topics.find(x => 'theme-' + x.id === node.id);
+    const meetings = t ? t.videoIds.map(mid => STATE.meetings.find(m => m.recording_id === mid)?.title || 'Unknown') : [];
+    html = `<div style="background:rgba(0,0,0,.75);padding:14px;border-left:3px solid #aed136">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#aed136;margin-bottom:4px">Theme</div>
+      <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:white;margin-bottom:6px">${esc(node.fullName)}</div>
+      ${node.description ? '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:8px;line-height:1.5">' + esc(node.description) + '</div>' : ''}
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.7">${meetings.map(m => '&bull; ' + esc(m)).join('<br>')}</div>
+      ${t ? `<button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;justify-content:center" onclick="showView('project-${t.id}')">Open Project</button>` : ''}
+    </div>`;
+  } else if (node.type === 'meeting') {
+    const mid = parseInt(node.id.replace('meeting-', ''));
+    const m = STATE.meetings.find(x => x.recording_id === mid);
+    const ppl = m ? (m.calendar_invitees || []).map(p => p.name || p.email).filter(Boolean) : [];
+    html = `<div style="background:rgba(0,0,0,.75);padding:14px;border-left:3px solid ${node.color}">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${node.color};margin-bottom:4px">Meeting</div>
+      <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:white;margin-bottom:4px">${esc(node.fullName)}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px">${node.date}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.7">${ppl.map(p => '&bull; ' + esc(p)).join('<br>')}</div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:10px;width:100%;justify-content:center;color:white;border-color:rgba(255,255,255,.3)" onclick="showMeetingDetail(${mid})">View Meeting</button>
+    </div>`;
+  } else if (node.type === 'person') {
+    const pid = node.id;
+    const inMeetings = [];
+    const inThemes = [];
+    (graphData?.links || []).forEach(l => {
+      const src = l.source?.id || l.source;
+      const tgt = l.target?.id || l.target;
+      const other = src === pid ? tgt : tgt === pid ? src : null;
+      if (!other) return;
+      if (other.startsWith('meeting-')) {
+        const m = STATE.meetings.find(x => x.recording_id === parseInt(other.replace('meeting-','')));
+        if (m) inMeetings.push(m.title || 'Untitled');
+      } else if (other.startsWith('theme-')) {
+        const t = STATE.topics.find(x => 'theme-' + x.id === other);
+        if (t) inThemes.push(t.name);
+      }
+    });
+    html = `<div style="background:rgba(0,0,0,.75);padding:14px;border-left:3px solid white">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:4px">Person</div>
+      <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:white;margin-bottom:8px">${esc(node.fullName)}</div>
+      ${inThemes.length ? '<div style="font-size:12px;color:#aed136;margin-bottom:6px;line-height:1.7"><strong>Themes:</strong><br>' + inThemes.map(t => '&bull; ' + esc(t)).join('<br>') + '</div>' : ''}
+      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.7"><strong style="color:rgba(255,255,255,.5)">Meetings (${inMeetings.length}):</strong><br>${inMeetings.map(m => '&bull; ' + esc(m)).join('<br>')}</div>
+    </div>`;
+  }
+
+  detail.innerHTML = html;
+  detail.style.display = html ? 'block' : 'none';
+
+  if (graph3dInstance && node.x != null) {
+    const dist = 120;
+    const ratio = 1 + dist / Math.hypot(node.x, node.y, node.z);
+    graph3dInstance.cameraPosition({ x: node.x * ratio, y: node.y * ratio, z: node.z * ratio }, node, 1000);
+  }
+}
+
+// ═══════ SEARCH ═══════
+function handleSearch(q) {
+  q = q.toLowerCase().trim();
+  if (!q) { showView(STATE.currentView); return; }
+  if (STATE.currentView === 'meetings' || STATE.currentView === 'topics') {
+    // Filter table rows or topic cards
+    const sel = STATE.currentView === 'meetings' ? '.data-table tbody tr' : '.topic-card';
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+}
+
+// ═══════ HELPERS ═══════
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+function showLoading(text) { document.getElementById('loadingText').textContent = text; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function showConnectError(msg) { const el = document.getElementById('connectError'); el.textContent = msg; el.style.display = 'block'; }
+let mermaidCounter = 0;
+
+function simpleMarkdown(md) {
+  if (!md) return '';
+
+  // First, extract mermaid blocks and replace with placeholders
+  const mermaidBlocks = [];
+  md = md.replace(/```mermaid\s*\n([\s\S]*?)```/g, function(_, code) {
+    const id = 'mermaid-' + (mermaidCounter++);
+    mermaidBlocks.push({ id, code: code.trim() });
+    return `%%MERMAID:${id}%%`;
+  });
+
+  // Also handle generic code blocks (non-mermaid)
+  md = md.replace(/```(\w*)\s*\n([\s\S]*?)```/g, function(_, lang, code) {
+    return '%%PRE%%' + code.replace(/\n/g, '%%NL%%') + '%%/PRE%%';
+  });
+
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Mermaid placeholder
+    const mermaidMatch = line.match(/%%MERMAID:(.+?)%%/);
+    if (mermaidMatch) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<div class="mermaid-container"><pre class="mermaid" id="${mermaidMatch[1]}"></pre></div>`;
+      continue;
+    }
+
+    // Pre block placeholder
+    if (line.includes('%%PRE%%')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      const content = line.replace('%%PRE%%','').replace('%%/PRE%%','').replace(/%%NL%%/g,'\n');
+      html += '<pre>' + esc(content) + '</pre>';
+      continue;
+    }
+
+    // Headings
+    if (/^### (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h3>' + inlineFormat(line.replace(/^### /, '')) + '</h3>'; continue; }
+    if (/^## (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h2>' + inlineFormat(line.replace(/^## /, '')) + '</h2>'; continue; }
+    if (/^# (.+)/.test(line)) { if (inList) { html += '</ul>'; inList = false; } html += '<h1>' + inlineFormat(line.replace(/^# /, '')) + '</h1>'; continue; }
+
+    // List items (  - or - )
+    const listMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if (listMatch) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + inlineFormat(listMatch[1]) + '</li>';
+      continue;
+    }
+
+    // Blank line
+    if (line.trim() === '') {
+      if (inList) { html += '</ul>'; inList = false; }
+      continue;
+    }
+
+    // Regular paragraph
+    if (inList) { html += '</ul>'; inList = false; }
+    html += '<p>' + inlineFormat(line) + '</p>';
+  }
+
+  if (inList) html += '</ul>';
+
+  // After HTML is built, schedule mermaid rendering
+  if (mermaidBlocks.length) {
+    setTimeout(() => renderMermaidBlocks(mermaidBlocks), 50);
+  }
+
+  return html;
+}
+
+async function renderMermaidBlocks(blocks) {
+  for (const block of blocks) {
+    const el = document.getElementById(block.id);
+    if (!el) continue;
+    try {
+      // Apply entity colors via style directives appended to the diagram
+      let code = block.code;
+      const styleLines = extractEntityStyles(code);
+      if (styleLines.length) code += '\n' + styleLines.join('\n');
+
+      const { svg } = await mermaid.render(block.id + '-svg', code);
+      el.outerHTML = `<div class="mermaid-container">${svg}</div>`;
+    } catch(e) {
+      // Fallback: show as code block if mermaid fails to parse
+      el.outerHTML = `<pre style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:1rem;font-size:13px">${esc(block.code)}</pre>`;
+    }
+  }
+}
+
+// Parse mermaid code to find node labels and apply consistent entity colors
+function extractEntityStyles(code) {
+  const styles = [];
+  const seen = new Set();
+  // Match node definitions like: A[Label], A([Label]), A{Label}, A(Label), A[/Label/]
+  const nodeRegex = /(\w+)\s*[\[\(\{\/]+([^\]\)\}\/]+)/g;
+  let match;
+  while ((match = nodeRegex.exec(code)) !== null) {
+    const nodeId = match[1];
+    const label = match[2].trim();
+    if (seen.has(nodeId)) continue;
+    seen.add(nodeId);
+
+    // Map well-known system names to consistent colors
+    const c = getEntityColor(label);
+    styles.push(`style ${nodeId} fill:${c.bg},stroke:${c.border},stroke-width:2px,color:${c.text}`);
+  }
+  return styles;
+}
+
+function inlineFormat(text) {
+  return text
+    // Links: [text](url) -> clickable, but strip the URL noise for readability
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, label, url) {
+      // If the label itself is the interesting content, just make it a subtle link
+      if (url.includes('fathom.video')) return '<a href="' + url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--green-40)">' + label + '</a>';
+      return '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>';
+    })
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Inline code
+    .replace(/`(.+?)`/g, '<code style="background:var(--gray-10);padding:1px 5px;font-size:13px">$1</code>');
+}
+
+// ═══════ DEMO DATA ═══════
+function generateDemoMeetings() {
+  const now = Date.now();
+  return [
+    makeDemoMeeting(1001, 'KR - Conflict Checks + Salesforce Integration', now - 13*86400000, 23, [
+      {name:'Yorence Ramiz'},{name:'Melissa Caban'},{name:'Adam Daube'},{name:'Anami Kumpawat'},{name:'Ariel Sofi'}
+    ], [
+      {speaker:{display_name:'Yorence Ramiz'},text:'So the goal today is understanding the Salesforce to STAR handoff and how it comes from Salesforce and see if we can figure out some automation to tie in these two systems that are currently joined only by human hands.',timestamp:'00:00:30'},
+      {speaker:{display_name:'Melissa Caban'},text:'I lead the Salesforce implementation for the firm. I have my tentacles in everything related to Salesforce across the firm, down to integrations, training, and getting service lines onboarded.',timestamp:'00:01:23'},
+      {speaker:{display_name:'Adam Daube'},text:'We have this thing called DbAmp which is a tool by CData. It is used to manage SQL Server pipelines. That is currently how we connect Salesforce into STAR, and then we have staging tables and data products around SQL Server.',timestamp:'00:02:00'},
+      {speaker:{display_name:'Melissa Caban'},text:'Manual entry, people create opportunities manually. Opportunities come to us in different ways. Not every service line does a conflict check. There are different avenues as to how an opportunity is created.',timestamp:'00:05:38'},
+      {speaker:{display_name:'Melissa Caban'},text:'If the opportunity is closed won, it can be incorporated into new client acceptance. We start the new client acceptance form, it goes through an approval process, once approved it pushes to STAR.',timestamp:'00:06:10'},
+      {speaker:{display_name:'Melissa Caban'},text:'Conflict check only exists in Salesforce in our sandbox. So keep that in mind. Once we set up that regular sync, there is a flow in Salesforce that will automatically generate an opportunity once the conflict check is cleared.',timestamp:'00:06:50'},
+      {speaker:{display_name:'Yorence Ramiz'},text:'For those opportunities that do not go through conflict checks, you just start with opportunity in Salesforce? The first place client information is recorded in our system is Salesforce.',timestamp:'00:12:58'},
+      {speaker:{display_name:'Melissa Caban'},text:'Yeah, for the conflict check service lines, it goes through conflict check before it gets to Salesforce. The idea is we do not want them going through opportunity phases if they are not even liable to be a client.',timestamp:'00:14:23'},
+      {speaker:{display_name:'Adam Daube'},text:'As long as we can weave in a service account, that would make security very happy. That is my one piece to add. Anything we do should be logged, service accounted, with credentials and rotating tokens.',timestamp:'00:19:45'},
+      {speaker:{display_name:'Yorence Ramiz'},text:'We are making a shift now internally to get all this stuff really shored up and enterprise-grade security. Our SecOps is only two people so I want us to be able to secure our stuff.',timestamp:'00:20:17'},
+      {speaker:{display_name:'Melissa Caban'},text:'If you want I can send you the structure of the matter parties. Kind of do a comparison between what we get from conflict check and what matter parties looks like.',timestamp:'00:21:45'},
+      {speaker:{display_name:'Yorence Ramiz'},text:'We can make an ETL layer in between to transform that data into the way that you need it and keep all the data in a warehouse somewhere and make sure Salesforce gets data in the format it needs.',timestamp:'00:22:01'},
+    ], '## Summary\n\nDiscussed the Salesforce to STAR data pipeline and conflict check integration.\n\n- Conflict checks exist only in Salesforce sandbox\n- Not all service lines require conflict checks (tax does not)\n- DbAmp/SQL Server handles Salesforce-STAR sync\n- Manual data entry is the primary bottleneck\n- Need service accounts with rotating tokens for security'),
+
+    makeDemoMeeting(1002, 'KR - Ariel Meeting the Data Team', now - 7*86400000, 50, [
+      {name:'Ariel Sofi'},{name:'Eileen G. Martin'},{name:'Gregory Spaulding'},{name:'Adam Daube'},{name:'Yorence Ramiz'}
+    ], [
+      {speaker:{display_name:'Gregory Spaulding'},text:'I have been at the firm for 10 to 12 years. Started as IT, started working with Eileen, moved to the SQL side, and slow rolled into a data engineer type role doing integrations and data pipelines.',timestamp:'00:00:08'},
+      {speaker:{display_name:'Eileen G. Martin'},text:'He also does all the API work, all the integrations, and the Azure warehousing stuff. I started at Helpdesk and had an affinity for databases. I love SQL and data metrics.',timestamp:'00:00:39'},
+      {speaker:{display_name:'Ariel Sofi'},text:'I have experience in DevOps, data engineering, and most recently was doing data engineering work for a genetic startup processing metagenomic samples. We used DataHub for data products, lineage, and governance.',timestamp:'00:02:14'},
+      {speaker:{display_name:'Gregory Spaulding'},text:'We do not have a formal data warehouse. We use SQL backend to store data for specific needs. We are just now starting data catalog and classification. Azure Data Factory is our main tool to move data, transitioned from SSIS.',timestamp:'00:07:06'},
+      {speaker:{display_name:'Ariel Sofi'},text:'So STAR is the hub system, sitting in the middle of the star topology for all client data. And what is the status of the STAR cloud migration?',timestamp:'00:11:30'},
+      {speaker:{display_name:'Eileen G. Martin'},text:'We cannot go to their cloud version because the subscription model would be too expensive. But they have not told anyone they are sunsetting the SQL version. There is no sunset date.',timestamp:'00:12:31'},
+      {speaker:{display_name:'Eileen G. Martin'},text:'Our foray into the AI space is very fragmented. Different people doing a million different things and nobody knows what is being done. I would really like more cohesion and direction in that department.',timestamp:'00:15:03'},
+      {speaker:{display_name:'Ariel Sofi'},text:'Wes is our internal chatbot agent platform for data discovery, workflow help for tax preparation, and managing long-lived processes like client onboarding. We need to tap into institutional knowledge.',timestamp:'00:16:36'},
+      {speaker:{display_name:'Adam Daube'},text:'So you want to set up a way to interact with SQL that is safe for both sides. We would need a service account with read-only access. The permissions will be related to the user making the request.',timestamp:'00:23:31'},
+      {speaker:{display_name:'Ariel Sofi'},text:'The system is RBAC with ABAC. Role-based access control with attribute-based access control. The model only uses the token the user has, it does not have any agency to go get data on its own.',timestamp:'00:34:13'},
+      {speaker:{display_name:'Gregory Spaulding'},text:'Security was the biggest issue with this. Getting the data is not an issue. Categorizing data, we can do that. But there has to be a very deep process around security.',timestamp:'00:36:23'},
+      {speaker:{display_name:'Adam Daube'},text:'The retention policy is aspirational. A lot of people are not conformant to it and there is no easy way to measure this across the firm. I will share that document with you.',timestamp:'00:42:46'},
+      {speaker:{display_name:'Ariel Sofi'},text:'We are going to build things in a sandbox. Not editing production data. Going through security checks that are best of breed. Then we provide security reports to security so they can give us a thumbs up.',timestamp:'00:47:37'},
+      {speaker:{display_name:'Adam Daube'},text:'If we could get that set up with Eden too, put him in the loop so we can get their guidance on the service account and the pass-through of permissions.',timestamp:'00:46:27'},
+    ], '## Summary\n\nAriel met with the data team to understand the current data posture.\n\n- No formal data warehouse exists; SQL Server + Azure Data Factory\n- STAR is the central hub; cloud migration not imminent\n- Domo is closest to a data warehouse\n- AI efforts are fragmented across the firm\n- Need MCP server with read-only STAR access\n- RBAC + ABAC security model proposed\n- Data volume ~100TB, veracity is questionable\n- Records retention policy is aspirational, not enforced')
+  ];
+}
+
+function makeDemoMeeting(id, title, ts, durMin, invitees, transcript, summary) {
+  const start = new Date(ts);
+  const end = new Date(ts + durMin * 60000);
+  return {
+    recording_id: id, title: title, meeting_title: title,
+    url: '#', share_url: '#',
+    created_at: start.toISOString(),
+    recording_start_time: start.toISOString(),
+    recording_end_time: end.toISOString(),
+    scheduled_start_time: start.toISOString(),
+    scheduled_end_time: end.toISOString(),
+    recorded_by: { display_name: 'Ariel Sofi' },
+    calendar_invitees: invitees.map(p => ({name: p.name, email: (p.name.split(' ')[0].toLowerCase() + '@kaufmanrossin.com')})),
+    transcript: transcript,
+    default_summary: { template_name: 'general', markdown_formatted: summary },
+    action_items: []
+  };
+}
+</script>
+</body>
+</html>
