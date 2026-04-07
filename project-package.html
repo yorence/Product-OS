@@ -379,6 +379,9 @@
     <button onclick="showView('graph3d')" data-view="graph3d">
       <span class="icon">&#127760;</span> Knowledge Graph
     </button>
+    <button onclick="showView('policies')" data-view="policies">
+      <span class="icon">&#128220;</span> Firm Policies <span class="badge">2</span>
+    </button>
 
     <div id="projectsNavSection">
       <div class="nav-section" style="margin-top:.8rem">Projects</div>
@@ -430,6 +433,16 @@
 
     <!-- Topic Detail View -->
     <div id="view-topic-detail" class="view-panel hidden"></div>
+
+    <!-- Firm Policies -->
+    <div id="view-policies" class="view-panel hidden">
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
+        <button class="btn btn-secondary btn-sm" onclick="showPolicy('retention')" id="pol-btn-retention" style="border-color:var(--green);color:var(--green-text)">Records Retention Policy</button>
+        <button class="btn btn-secondary btn-sm" onclick="showPolicy('wisp')" id="pol-btn-wisp">Information Security (WISP)</button>
+      </div>
+      <div class="callout" style="margin-bottom:1.5rem">These policies are automatically included as context when generating project documents (security evaluations, roadmaps, and meeting prep). Edit the source files in <code style="background:var(--gray-10);padding:1px 5px;font-size:13px">policies/</code> to update.</div>
+      <div id="policyContent" class="proj-artifact"></div>
+    </div>
 
     <!-- 3D Knowledge Graph -->
     <div id="view-graph3d" class="view-panel hidden">
@@ -1096,6 +1109,9 @@ MEETINGS INVOLVED: ${t.videoCount} meetings, ${t.segments.length} transcript seg
 OTHER ACTIVE INITIATIVES (for context — these are the other themes being worked on across the team):
 ${otherThemes}
 
+FIRM POLICIES (security evaluations, roadmaps, and meeting prep MUST account for these):
+${getPoliciesContext().substring(0, 3000)}
+
 BROADER MEETING CONTEXT (summaries from all recent meetings):
 ${allMeetingSummaries.substring(0, 3000)}
 
@@ -1148,7 +1164,7 @@ RESPOND WITH VALID JSON ONLY (no markdown fences around the JSON itself):
   "prep": "## Action Items Before Next Meeting\\n...\\n## Discussion Topics for Next Meeting\\n...\\n## Suggested Attendees\\n...",
   "brief": "## Problem\\n...\\n## Target User\\n...\\n## User Stories\\n...\\n## Success Metrics\\n...\\n## Risks\\n...",
   "roadmap": "## P0 — Must Do\\n...\\n## P1 — Should Do\\n...\\n## P2 — Nice to Have\\n...",
-  "security": "## Security Considerations\\n...\\n## Risks\\n...\\n## Recommendations\\n...",
+  "security": "## Security Considerations\\n(Reference the firm's WISP and Records Retention Policy provided above)\\n## Risks\\n...\\n## Compliance Requirements\\n...\\n## Recommendations\\n...",
   "pipeline": "## Data Flow\\n\\nDescription...\\n\\n\`\`\`mermaid\\ngraph LR\\n  sf[Salesforce]\\n  sql[SQL Server]\\n  star[STAR]\\n  sf -->|DbAmp| sql\\n  sql --> star\\n\`\`\`\\n\\n## Key Integration Points\\n...",
   "process": "## Process Flow\\n\\nDescription...\\n\\n\`\`\`mermaid\\ngraph TD\\n  start[Step 1]\\n  decide{Decision}\\n  yes[Step 2]\\n  no[Step 3]\\n  start --> decide\\n  decide -->|Yes| yes\\n  decide -->|No| no\\n\`\`\`\\n\\n## Notes\\n..."
 }
@@ -1202,7 +1218,7 @@ function showView(view) {
   const btn = document.querySelector(`[data-view="${view}"]`);
   if (btn) btn.classList.add('active');
 
-  const titles = { meetings:'All Meetings', topics:'Themes Index', graph3d:'Knowledge Graph' };
+  const titles = { meetings:'All Meetings', topics:'Themes Index', graph3d:'Knowledge Graph', policies:'Firm Policies' };
 
   // Handle project-N views
   if (view.startsWith('project-')) {
@@ -1221,6 +1237,7 @@ function showView(view) {
   if (view === 'meetings') renderMeetings();
   else if (view === 'topics') renderTopics();
   else if (view === 'graph3d') renderGraph3D();
+  else if (view === 'policies') showPolicy('retention');
 }
 
 function renderMeetings() {
@@ -1446,6 +1463,95 @@ function showTopicDetail(topicId) {
     </div>
     <div class="segment-list">${segHtml}</div>
   `;
+}
+
+// ═══════ FIRM POLICIES ═══════
+const FIRM_POLICIES = {
+  retention: `# KR Records Retention Policy & Schedule
+**Version:** 1.5 | **Effective:** August 12, 2024 | **Scope:** Firm-wide
+**Policy Owner:** Richard Salinas (COO), Ivan Garces (CRO) | **Records Administrator:** Adam Daube
+
+## Key Rules
+- Default retention for unclassified records: **max 2 years**
+- Most client and administrative records: **8 years**
+- Destruction occurs 6-8 months after fiscal year end
+- Electronic records on designated centralized server (F: drive)
+- Paperless environment — all paper scanned, originals shredded (exceptions: signed engagement letters, signed representation letters, legal confirmations)
+
+## Client Records
+- **Audit/Assurance:** 8 years after lock-down (45 days after issuance)
+- **Tax returns + workpapers:** 8 years; permanent basis items (current clients): permanent
+- **Forensic/Advisory/Valuation:** 8 years after issuance; banking validation: 5 years
+- **Expert reports:** 8 years after final adjudication
+- **Estate & Trust:** Fiduciary returns 8 years; estate planning docs, 706s, 709s: permanent
+- **Escrow Services:** All permanent
+- **Accounting & Family Office:** 8 years; return client docs on closing
+
+## Administrative Records
+- Corporate documents, bylaws, licenses, policies: **permanent**
+- Accounting records, payroll, personnel: **8 years**
+- Insurance: **8 years after term**
+- IT backup tapes: **8 years**; file server snapshots: **3 months**
+
+## Legal Holds
+Litigation/subpoena/investigation triggers suspension. Records Administrator implements holds. Records revert to normal retention once all holds lifted.
+
+## Compliance Gap
+Per Adam Daube (March 30, 2026): "The retention policy is aspirational. A lot of people aren't conformant to it, and there's no easy way to measure compliance across the firm."`,
+
+  wisp: `# KR Written Information Security Program (WISP 2025)
+**Effective:** 2025 | **Scope:** Firm-wide | **CISO:** Vlad Rudnitsky | **CTO:** Jerry Rodriguez
+
+## Access Control
+- All system access must be authenticated and authorized
+- Service accounts require security review and approval from SecOps (Eden)
+- Principle of least privilege; token-based auth with rotation
+- SecOps team is 2 people — approval bottleneck risk
+
+## Data Protection
+- Client data is confidential — protected in transit (TLS 1.2+) and at rest (encryption)
+- Electronic records on designated centralized servers only
+- Files must NOT reside on local hard drives or portable media
+- Portable storage returned to client or erased after transfer
+
+## Third-Party & Vendor Management
+- Vendors handling client data must be security-assessed
+- Data processing agreements required for external AI/LLM providers
+- Prefer providers with contractual guarantees against training on customer data
+- Vendor risk assessments must include AI data handling questions
+
+## AI/Data Project Implications
+- Service accounts with rotating tokens required for MCP/API access
+- RBAC + ABAC model proposed for Wes AI platform (per Ariel Sofi)
+- User tokens passed through to target systems; LLM has no independent agency
+- Sandbox-first development: isolated environment, security reports to SecOps before production
+- AI artifacts (embeddings, vector stores, caches) treated as records under retention policy
+- Legal review required before using client data for LLM fine-tuning or RAG
+
+## Incident Response
+- Security incidents reported immediately
+- Legal holds may be triggered by incidents
+- All employees must comply; violations = disciplinary action up to termination`
+};
+
+function showPolicy(key) {
+  const content = document.getElementById('policyContent');
+  if (!content) return;
+  content.innerHTML = simpleMarkdown(FIRM_POLICIES[key] || 'Policy not found.');
+  // Update button states
+  document.querySelectorAll('[id^="pol-btn-"]').forEach(b => {
+    b.style.borderColor = '';
+    b.style.color = '';
+  });
+  const activeBtn = document.getElementById('pol-btn-' + key);
+  if (activeBtn) {
+    activeBtn.style.borderColor = 'var(--green)';
+    activeBtn.style.color = 'var(--green-text)';
+  }
+}
+
+function getPoliciesContext() {
+  return Object.values(FIRM_POLICIES).join('\n\n---\n\n');
 }
 
 // ═══════ 3D KNOWLEDGE GRAPH ═══════
