@@ -144,23 +144,25 @@ function buildGraphData() {
     const tid = 'theme-' + t.id;
     nodes.push({ id: tid, name: t.name, fullName: t.name, description: t.description || '', type: 'theme', color: '#aed136', val: 12 });
 
-    // Count how many transcript lines each person has in this theme's segments
+    // Count how many transcript lines each normalized person has in this theme's segments
     const peopleCounts = {};
     t.segments.forEach(s => {
       (s.lines || []).forEach(l => {
-        const n = l.speaker?.display_name;
+        const n = normalizeName(l.speaker?.display_name);
         if (n) peopleCounts[n] = (peopleCounts[n] || 0) + 1;
       });
-      (s.speakers || []).forEach(n => {
+      (s.speakers || []).forEach(raw => {
+        const n = normalizeName(raw);
         if (n && !peopleCounts[n]) peopleCounts[n] = 1;
       });
     });
 
-    // Also include meeting invitees (lower strength -- attended but may not have spoken on topic)
+    // Also include meeting invitees (lower strength)
     t.videoIds.forEach(mid => {
       const m = STATE.meetings.find(x => x.recording_id === mid);
       if (m) (m.calendar_invitees || []).forEach(p => {
-        if (p.name && !peopleCounts[p.name]) peopleCounts[p.name] = 1;
+        const n = normalizeName(p.name);
+        if (n && !peopleCounts[n]) peopleCounts[n] = 1;
       });
     });
 
@@ -170,7 +172,13 @@ function buildGraphData() {
         personSet.set(name, pid);
         nodes.push({ id: pid, name: name, fullName: name, type: 'person', color: '#ffffff', val: 5 });
       }
-      links.push({ source: tid, target: personSet.get(name), type: 'involves', strength: count });
+      // If this person already has a link to this theme (from a prior alias), merge strength
+      const existingLink = links.find(l => (l.source?.id || l.source) === tid && (l.target?.id || l.target) === personSet.get(name));
+      if (existingLink) {
+        existingLink.strength = (existingLink.strength || 0) + count;
+      } else {
+        links.push({ source: tid, target: personSet.get(name), type: 'involves', strength: count });
+      }
     });
   });
 
@@ -271,9 +279,22 @@ function renderGraph3D() {
       });
 
       populateGraphDirectory();
+
+      // Resize handler
+      if (!window._graph3dResizeHandler) {
+        window._graph3dResizeHandler = () => {
+          if (graph3dInstance && STATE.currentView === 'graph3d') {
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            if (cw > 10 && ch > 10) graph3dInstance.width(cw).height(ch);
+          }
+        };
+        window.addEventListener('resize', window._graph3dResizeHandler);
+      }
     } catch(e) {
       console.error('Graph3D init error:', e);
-      container.querySelector('#graph3d-info').textContent = 'Error initializing 3D graph: ' + e.message;
+      const info = document.getElementById('graph3d-info');
+      if (info) info.textContent = 'Error initializing 3D graph: ' + e.message;
     }
   });
 }

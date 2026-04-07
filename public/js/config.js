@@ -75,3 +75,50 @@ let STATE = {
 try { const pd = sessionStorage.getItem('project_docs'); if (pd) STATE.projectDocs = JSON.parse(pd); } catch(e) {}
 
 const TOPIC_COLORS = ['#3498db','#e74c3c','#2ecc71','#9b59b6','#e67e22','#1abc9c','#34495e','#f39c12','#d35400','#16a085','#8e44ad','#c0392b','#27ae60','#2980b9','#f1c40f'];
+
+// ═══════ NAME NORMALIZATION ═══════
+// Maps variant names, usernames, and device names to canonical proper names.
+// Add entries here as new variants appear in Fathom data.
+const NAME_ALIASES = {
+  'yorence ramiz-velasquez': 'Yorence Ramiz',
+  'yorence ramiz':           'Yorence Ramiz',
+  'albert primo':            'Albert Primo',
+  'primo':                   'Albert Primo',
+  'ariel sofi':              'Ariel Sofi',
+  'asofi':                   'Ariel Sofi',
+  'eileen g. martin':        'Eileen Martin',
+  'eileen martin':           'Eileen Martin',
+  'gregory spaulding':       'Gregory Spaulding',
+  'greg spaulding':          'Gregory Spaulding',
+  'adam daube':              'Adam Daube',
+  'melissa caban':           'Melissa Caban',
+  'anami kumpawat':          'Anami Kumpawat',
+  'richard salinas':         'Richard Salinas',
+  "richard's iphone":        'Richard Salinas',
+  'jason reed':              'Jason Reed',
+  'josh gumerove':           'Josh Gumerove',
+  'nicholas rivera':         'Nicholas Rivera',
+  'lilia restrepo':          'Lilia Restrepo',
+  'olga gorokhovskaia':      'Olga Gorokhovskaia',
+  'jar.jona':                'Jar Jona',
+  'j a r j o n a':           'Jar Jona',
+  'juanes':                  'Juanes',
+};
+
+// Excluded "names" that are devices/bots, not people
+const NAME_EXCLUDE = new Set(["richard's iphone"]);
+
+function normalizeName(rawName) {
+  if (!rawName) return null;
+  const key = rawName.trim().toLowerCase();
+  if (NAME_EXCLUDE.has(key)) return null;
+  if (NAME_ALIASES[key]) return NAME_ALIASES[key];
+
+  // Fuzzy: check if any alias key is a substring match
+  for (const [alias, canonical] of Object.entries(NAME_ALIASES)) {
+    if (key.includes(alias) || alias.includes(key)) return canonical;
+  }
+
+  // Fallback: title-case the raw name
+  return rawName.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
