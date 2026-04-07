@@ -486,8 +486,9 @@
       <div id="graph3d-container" style="width:100%;height:calc(100vh - 120px);background:var(--charcoal);position:relative">
         <div id="graph3d-legend" style="position:absolute;top:16px;left:16px;z-index:10;display:flex;flex-direction:column;gap:6px">
           <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Theme</span></div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#4a70a0;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Meeting</span></div>
           <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Person</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:1px;height:12px;background:rgba(174,209,54,.6);display:inline-block;margin:0 5px"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)">Involved in theme</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:1px;height:12px;background:rgba(119,148,188,.4);display:inline-block;margin:0 5px"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)">Co-involved</span></div>
         </div>
         <div id="graph3d-info" style="position:absolute;bottom:16px;left:16px;z-index:10;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.35)">Click a node to inspect. Drag to rotate. Scroll to zoom.</div>
         <div id="graph3d-detail" style="position:absolute;top:16px;right:16px;z-index:10;max-width:300px;display:none"></div>
@@ -1707,6 +1708,126 @@ function getPoliciesContext() {
 // ═══════ 3D KNOWLEDGE GRAPH ═══════
 let graph3dInstance = null;
 let graphData = null;
+let highlightedNodes = new Set();
+let highlightedLinks = new Set();
+
+let selectedNode = null;
+
+function highlightConnected(node) {
+  selectedNode = node;
+  highlightedNodes.clear();
+  highlightedLinks.clear();
+  highlightedNodes.add(node.id);
+
+  // Find all directly connected nodes + their link strength
+  const connectedStrengths = {};
+  (graphData?.links || []).forEach(l => {
+    const src = l.source?.id || l.source;
+    const tgt = l.target?.id || l.target;
+    let otherId = null;
+    if (src === node.id) otherId = tgt;
+    else if (tgt === node.id) otherId = src;
+    if (otherId) {
+      highlightedNodes.add(otherId);
+      highlightedLinks.add(l);
+      connectedStrengths[otherId] = (l.strength || 1);
+    }
+  });
+
+  // Find max strength for normalization
+  const strengths = Object.values(connectedStrengths);
+  const maxStr = Math.max(...strengths, 1);
+
+  if (!graph3dInstance) return;
+
+  // Fly camera to center on selected node
+  const dist = 150;
+  const hyp = Math.hypot(node.x || 0, node.y || 0, node.z || 0) || 1;
+  const ratio = 1 + dist / hyp;
+  graph3dInstance.cameraPosition(
+    { x: (node.x || 0) * ratio, y: (node.y || 0) * ratio, z: (node.z || 0) * ratio },
+    { x: node.x || 0, y: node.y || 0, z: node.z || 0 },
+    1200
+  );
+
+  // Arrange connected nodes in a circle around the selected node
+  const connectedIds = Object.keys(connectedStrengths);
+  const angleStep = (2 * Math.PI) / (connectedIds.length || 1);
+  const orbitRadius = 50;
+
+  connectedIds.forEach((cid, i) => {
+    const cNode = graphData.nodes.find(n => n.id === cid);
+    if (!cNode) return;
+    const str = connectedStrengths[cid] / maxStr; // 0-1 normalized
+    const r = orbitRadius * (1.2 - str * 0.5); // stronger = closer
+    const angle = angleStep * i;
+    // Position in a circle on the XY plane around the selected node
+    cNode.fx = (node.x || 0) + r * Math.cos(angle);
+    cNode.fy = (node.y || 0) + r * Math.sin(angle);
+    cNode.fz = (node.z || 0) + (Math.random() - 0.5) * 10;
+  });
+
+  // Pin the selected node
+  node.fx = node.x;
+  node.fy = node.y;
+  node.fz = node.z;
+
+  // Update visuals — use nodeColor with alpha for opacity since nodeOpacity only takes a number
+  graph3dInstance
+    .nodeColor(n => {
+      if (n.id === node.id) return n.color;
+      if (!highlightedNodes.has(n.id)) return 'rgba(60,60,60,0.06)';
+      // Brighter for stronger connections
+      const str = connectedStrengths[n.id] || 1;
+      const alpha = 0.5 + (str / maxStr) * 0.5;
+      if (n.type === 'theme') return `rgba(174,209,54,${alpha})`;
+      return `rgba(255,255,255,${alpha})`;
+    })
+    .nodeVal(n => {
+      if (n.id === node.id) return 16;
+      if (!highlightedNodes.has(n.id)) return 0.5;
+      const str = connectedStrengths[n.id] || 1;
+      return 3 + (str / maxStr) * 10;
+    })
+    .linkColor(l => {
+      if (!highlightedLinks.has(l)) return 'rgba(60,60,60,0.02)';
+      const str = l.strength || 1;
+      const opacity = 0.3 + (str / maxStr) * 0.7;
+      return `rgba(174,209,54,${opacity})`;
+    })
+    .linkWidth(l => {
+      if (!highlightedLinks.has(l)) return 0.1;
+      const str = l.strength || 1;
+      return 1 + (str / maxStr) * 5;
+    })
+    .nodeLabel(n => highlightedNodes.has(n.id) ? n.name : '');
+}
+
+function defaultLinkColor(l) {
+  if (l.type === 'involves') return 'rgba(174,209,54,0.3)';
+  if (l.type === 'co_theme') return 'rgba(119,148,188,0.15)';
+  return 'rgba(119,148,188,0.2)';
+}
+
+function clearHighlight() {
+  selectedNode = null;
+  highlightedNodes.clear();
+  highlightedLinks.clear();
+
+  // Unpin all nodes
+  if (graphData) {
+    graphData.nodes.forEach(n => { n.fx = undefined; n.fy = undefined; n.fz = undefined; });
+  }
+
+  if (graph3dInstance) {
+    graph3dInstance
+      .nodeColor(n => n.color)
+      .nodeVal(n => n.type === 'theme' ? 12 : 5)
+      .linkColor(l => defaultLinkColor(l))
+      .linkWidth(l => l.type === 'involves' ? 1.5 : 0.5)
+      .nodeLabel(n => n.name);
+  }
+}
 
 function getNodeColor(name, type) {
   // People get white, themes get green, meetings use entity color registry for consistency with Mermaid
@@ -1722,53 +1843,65 @@ function buildGraphData() {
   const links = [];
   const personSet = new Map();
 
-  STATE.meetings.forEach(m => {
-    const title = m.title || m.meeting_title || 'Untitled';
-    const date = new Date(m.recording_start_time || m.created_at);
-    nodes.push({
-      id: 'meeting-' + m.recording_id,
-      name: title.length > 35 ? title.substring(0, 35) + '...' : title,
-      fullName: title,
-      type: 'meeting',
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      color: getNodeColor(title, 'meeting'),
-      val: 6
+  if (!STATE.topicsUnlocked || !STATE.topics.length) return { nodes, links };
+
+  // Only themes and people — no meeting nodes
+  STATE.topics.forEach(t => {
+    const tid = 'theme-' + t.id;
+    nodes.push({ id: tid, name: t.name, fullName: t.name, description: t.description || '', type: 'theme', color: '#aed136', val: 12 });
+
+    // Count how many transcript lines each person has in this theme's segments
+    const peopleCounts = {};
+    t.segments.forEach(s => {
+      (s.lines || []).forEach(l => {
+        const n = l.speaker?.display_name;
+        if (n) peopleCounts[n] = (peopleCounts[n] || 0) + 1;
+      });
+      (s.speakers || []).forEach(n => {
+        if (n && !peopleCounts[n]) peopleCounts[n] = 1;
+      });
     });
 
-    // Gather people from invitees + transcript speakers
-    const people = new Set();
-    (m.calendar_invitees || []).forEach(p => { if (p.name) people.add(p.name); });
-    (m.transcript || []).forEach(l => { if (l.speaker?.display_name) people.add(l.speaker.display_name); });
+    // Also include meeting invitees (lower strength -- attended but may not have spoken on topic)
+    t.videoIds.forEach(mid => {
+      const m = STATE.meetings.find(x => x.recording_id === mid);
+      if (m) (m.calendar_invitees || []).forEach(p => {
+        if (p.name && !peopleCounts[p.name]) peopleCounts[p.name] = 1;
+      });
+    });
 
-    people.forEach(name => {
+    Object.entries(peopleCounts).forEach(([name, count]) => {
       const pid = 'person-' + name.toLowerCase().replace(/[^a-z]/g, '');
       if (!personSet.has(name)) {
         personSet.set(name, pid);
-        nodes.push({ id: pid, name: name, fullName: name, type: 'person', color: '#ffffff', val: 4 });
+        nodes.push({ id: pid, name: name, fullName: name, type: 'person', color: '#ffffff', val: 5 });
       }
-      links.push({ source: personSet.get(name), target: 'meeting-' + m.recording_id, type: 'attended' });
+      links.push({ source: tid, target: personSet.get(name), type: 'involves', strength: count });
     });
   });
 
-  if (STATE.topicsUnlocked && STATE.topics.length) {
-    STATE.topics.forEach(t => {
-      const tid = 'theme-' + t.id;
-      nodes.push({ id: tid, name: t.name, fullName: t.name, description: t.description || '', type: 'theme', color: '#aed136', val: 12 });
-
-      t.videoIds.forEach(mid => {
-        links.push({ source: tid, target: 'meeting-' + mid, type: 'discussed_in' });
-      });
-
-      const themePeople = new Set();
-      t.segments.forEach(s => {
-        (s.speakers || []).forEach(n => { if (personSet.has(n)) themePeople.add(n); });
-        (s.lines || []).forEach(l => { const n = l.speaker?.display_name; if (n && personSet.has(n)) themePeople.add(n); });
-      });
-      themePeople.forEach(name => {
-        links.push({ source: tid, target: personSet.get(name), type: 'involves' });
-      });
-    });
-  }
+  // Add links between people who share themes (co-involvement)
+  STATE.topics.forEach(t => {
+    const tid = 'theme-' + t.id;
+    const peoplInTheme = (graphData?.links || links).filter(l => {
+      const src = l.source?.id || l.source;
+      return src === tid;
+    }).map(l => l.target?.id || l.target);
+    // Connect co-involved people (lightweight, only if both in same theme)
+    for (let i = 0; i < peoplInTheme.length; i++) {
+      for (let j = i + 1; j < peoplInTheme.length; j++) {
+        if (peoplInTheme[i].startsWith('person-') && peoplInTheme[j].startsWith('person-')) {
+          // Only add if not already linked
+          const exists = links.some(l => {
+            const s = l.source?.id || l.source;
+            const t2 = l.target?.id || l.target;
+            return l.type === 'co_theme' && ((s === peoplInTheme[i] && t2 === peoplInTheme[j]) || (s === peoplInTheme[j] && t2 === peoplInTheme[i]));
+          });
+          if (!exists) links.push({ source: peoplInTheme[i], target: peoplInTheme[j], type: 'co_theme' });
+        }
+      }
+    }
+  });
 
   return { nodes, links };
 }
@@ -1776,6 +1909,17 @@ function buildGraphData() {
 function renderGraph3D() {
   const container = document.getElementById('graph3d-container');
   if (!container) return;
+
+  // If themes aren't unlocked, show prompt
+  if (!STATE.topicsUnlocked || !STATE.topics.length) {
+    container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;text-align:center;padding:2rem">
+      <div style="font-size:2.5rem;opacity:.3">&#127760;</div>
+      <div style="font-family:var(--fd);font-size:16px;font-weight:800;color:white">Knowledge Graph</div>
+      <div style="font-size:15px;color:rgba(255,255,255,.4);max-width:400px;line-height:1.6">The knowledge graph visualizes how themes and people are connected across your meetings. Unlock themes first to populate it.</div>
+      <button class="btn btn-primary" onclick="showView('topics')">Unlock Themes</button>
+    </div>`;
+    return;
+  }
 
   // Wait a frame so the panel is visible and has dimensions
   requestAnimationFrame(() => {
@@ -1809,19 +1953,31 @@ function renderGraph3D() {
         .width(w)
         .height(h)
         .nodeColor(n => n.color)
-        .nodeVal(n => n.val)
+        .nodeVal(n => n.val || 5)
         .nodeLabel(n => n.name)
-        .nodeOpacity(0.92)
         .nodeResolution(16)
-        .linkColor(l => {
-          if (l.type === 'discussed_in') return 'rgba(174,209,54,0.4)';
-          if (l.type === 'involves') return 'rgba(174,209,54,0.2)';
-          return 'rgba(119,148,188,0.25)';
-        })
-        .linkWidth(l => l.type === 'discussed_in' ? 2 : 0.6)
+        .linkColor(l => defaultLinkColor(l))
+        .linkWidth(l => l.type === 'involves' ? 1.5 : 0.5)
         .linkOpacity(0.7)
-        .onNodeClick(node => showGraphDetail(node))
-        .d3Force('charge').strength(n => n.type === 'theme' ? -200 : -60);
+        .onNodeClick(node => {
+          showGraphDetail(node);
+          highlightConnected(node);
+        })
+        .onBackgroundClick(() => {
+          clearHighlight();
+          const detail = document.getElementById('graph3d-detail');
+          if (detail) detail.style.display = 'none';
+        });
+
+      // Configure forces separately (d3Force returns force obj, not graph)
+      graph3dInstance.d3Force('charge').strength(-80);
+      graph3dInstance.d3Force('link').distance(l => {
+        if (l.type === 'involves') {
+          const str = l.strength || 1;
+          return 80 - Math.min(str * 3, 50); // stronger = shorter link
+        }
+        return 100;
+      });
     } catch(e) {
       console.error('Graph3D init error:', e);
       container.querySelector('#graph3d-info').textContent = 'Error initializing 3D graph: ' + e.message;
@@ -1836,58 +1992,47 @@ function showGraphDetail(node) {
 
   if (node.type === 'theme') {
     const t = STATE.topics.find(x => 'theme-' + x.id === node.id);
-    const meetings = t ? t.videoIds.map(mid => STATE.meetings.find(m => m.recording_id === mid)?.title || 'Unknown') : [];
+    // Find people connected to this theme
+    const people = [];
+    (graphData?.links || []).forEach(l => {
+      const src = l.source?.id || l.source;
+      const tgt = l.target?.id || l.target;
+      if (src === node.id && typeof tgt === 'string' && tgt.startsWith('person-')) {
+        const pNode = graphData.nodes.find(n => n.id === tgt);
+        if (pNode) people.push(pNode.name);
+      }
+    });
     html = `<div style="background:rgba(0,0,0,.75);padding:14px;border-left:3px solid #aed136">
       <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#aed136;margin-bottom:4px">Theme</div>
       <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:white;margin-bottom:6px">${esc(node.fullName)}</div>
       ${node.description ? '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:8px;line-height:1.5">' + esc(node.description) + '</div>' : ''}
-      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.7">${meetings.map(m => '&bull; ' + esc(m)).join('<br>')}</div>
+      ${people.length ? '<div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.7;margin-bottom:6px"><strong style="color:rgba(255,255,255,.55)">People involved:</strong><br>' + people.map(p => '&bull; ' + esc(p)).join('<br>') + '</div>' : ''}
       ${t ? `<button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%;justify-content:center" onclick="showView('project-${t.id}')">Open Project</button>` : ''}
-    </div>`;
-  } else if (node.type === 'meeting') {
-    const mid = parseInt(node.id.replace('meeting-', ''));
-    const m = STATE.meetings.find(x => x.recording_id === mid);
-    const ppl = m ? (m.calendar_invitees || []).map(p => p.name || p.email).filter(Boolean) : [];
-    html = `<div style="background:rgba(0,0,0,.75);padding:14px;border-left:3px solid ${node.color}">
-      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${node.color};margin-bottom:4px">Meeting</div>
-      <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:white;margin-bottom:4px">${esc(node.fullName)}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px">${node.date}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.7">${ppl.map(p => '&bull; ' + esc(p)).join('<br>')}</div>
-      <button class="btn btn-secondary btn-sm" style="margin-top:10px;width:100%;justify-content:center;color:white;border-color:rgba(255,255,255,.3)" onclick="showMeetingDetail(${mid})">View Meeting</button>
     </div>`;
   } else if (node.type === 'person') {
     const pid = node.id;
-    const inMeetings = [];
     const inThemes = [];
     (graphData?.links || []).forEach(l => {
       const src = l.source?.id || l.source;
       const tgt = l.target?.id || l.target;
-      const other = src === pid ? tgt : tgt === pid ? src : null;
-      if (!other) return;
-      if (other.startsWith('meeting-')) {
-        const m = STATE.meetings.find(x => x.recording_id === parseInt(other.replace('meeting-','')));
-        if (m) inMeetings.push(m.title || 'Untitled');
-      } else if (other.startsWith('theme-')) {
-        const t = STATE.topics.find(x => 'theme-' + x.id === other);
-        if (t) inThemes.push(t.name);
+      if (l.type === 'involves') {
+        if (tgt === pid && typeof src === 'string' && src.startsWith('theme-')) {
+          const t = STATE.topics.find(x => 'theme-' + x.id === src);
+          if (t) inThemes.push(t);
+        }
       }
     });
     html = `<div style="background:rgba(0,0,0,.75);padding:14px;border-left:3px solid white">
       <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:4px">Person</div>
       <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:white;margin-bottom:8px">${esc(node.fullName)}</div>
-      ${inThemes.length ? '<div style="font-size:12px;color:#aed136;margin-bottom:6px;line-height:1.7"><strong>Themes:</strong><br>' + inThemes.map(t => '&bull; ' + esc(t)).join('<br>') + '</div>' : ''}
-      <div style="font-size:12px;color:rgba(255,255,255,.35);line-height:1.7"><strong style="color:rgba(255,255,255,.5)">Meetings (${inMeetings.length}):</strong><br>${inMeetings.map(m => '&bull; ' + esc(m)).join('<br>')}</div>
+      ${inThemes.length ? '<div style="font-size:12px;line-height:1.8">' + inThemes.map(t => '<div style="margin-bottom:4px"><span style="display:inline-block;width:8px;height:8px;background:#aed136;margin-right:6px"></span><span style="color:#aed136;cursor:pointer" onclick="showView(\'project-' + t.id + '\')">' + esc(t.name) + '</span></div>').join('') + '</div>' : '<div style="font-size:12px;color:rgba(255,255,255,.35)">No themes linked</div>'}
     </div>`;
   }
 
   detail.innerHTML = html;
   detail.style.display = html ? 'block' : 'none';
 
-  if (graph3dInstance && node.x != null) {
-    const dist = 120;
-    const ratio = 1 + dist / Math.hypot(node.x, node.y, node.z);
-    graph3dInstance.cameraPosition({ x: node.x * ratio, y: node.y * ratio, z: node.z * ratio }, node, 1000);
-  }
+  // Camera centering is handled by highlightConnected()
 }
 
 // ═══════ SEARCH ═══════
