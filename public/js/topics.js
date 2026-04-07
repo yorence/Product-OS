@@ -50,15 +50,56 @@ function buildMeetingSummary(m) {
   return `"${title}" | ${date} | ID:${m.recording_id} | ${participants}\n${body}`;
 }
 
-// ── Micro-batch builder (2-3 meetings per batch) ──────────────
+// ── Smart batch builder — groups related meetings together ────
 
 function buildMicroBatches(meetings) {
-  const MEETINGS_PER_BATCH = 5; // 5 meetings per batch — balances speed vs rate limits
-  const batches = [];
-  for (let i = 0; i < meetings.length; i += MEETINGS_PER_BATCH) {
-    batches.push(meetings.slice(i, i + MEETINGS_PER_BATCH));
+  const MAX_PER_BATCH = 12;
+
+  // Step 1: Extract a "key" from each meeting title by stripping common prefixes,
+  // dates, numbers, and normalizing. Meetings with the same key go in the same batch.
+  function titleKey(m) {
+    return (m.title || m.meeting_title || '')
+      .toLowerCase()
+      .replace(/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/g, '') // strip dates
+      .replace(/\b(meeting|call|sync|standup|check-in|weekly|daily|bi-weekly|monthly)\b/gi, '')
+      .replace(/\b(kr|kaufman|rossin)\b/gi, '')
+      .replace(/[^a-z\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ').slice(0, 3).join(' '); // first 3 significant words
   }
-  return batches;
+
+  // Group meetings by title key
+  const groups = {};
+  meetings.forEach(m => {
+    const key = titleKey(m) || '_misc';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(m);
+  });
+
+  // Build batches: keep related meetings together, split if over max
+  const batches = [];
+  Object.values(groups).forEach(group => {
+    for (let i = 0; i < group.length; i += MAX_PER_BATCH) {
+      batches.push(group.slice(i, i + MAX_PER_BATCH));
+    }
+  });
+
+  // Merge tiny batches (< 3 meetings) into neighbors to avoid wasting API calls
+  const merged = [];
+  let accumulator = [];
+  batches.forEach(batch => {
+    if (batch.length < 3 && accumulator.length + batch.length <= MAX_PER_BATCH) {
+      accumulator = accumulator.concat(batch);
+    } else {
+      if (accumulator.length) merged.push(accumulator);
+      accumulator = batch.length < 3 ? batch.slice() : [];
+      if (batch.length >= 3) merged.push(batch);
+    }
+  });
+  if (accumulator.length) merged.push(accumulator);
+
+  return merged;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -121,7 +162,9 @@ async function perplexityCall(perplexityKey, prompt, maxTokens, retries = 3) {
 //  PHASE 1 — MAP: Extract raw themes from micro-batches
 // ══════════════════════════════════════════════════════════════
 
-const MAP_PROMPT = `Extract the main work-stream THEMES from these meetings. For each theme give a short name and 3-8 exact searchable phrases from the text. JSON only, no fences:
+const MAP_PROMPT = `Extract the major INITIATIVES or PROJECTS from these meetings. Be broad — group related discussions into single themes. For example, all discussions about the same tool (PandaDoc, Salesforce, STAR) or process (client onboarding, conflict checks) should be ONE theme, not multiple.
+
+Aim for 3-6 themes max. For each: a broad name and 3-8 searchable phrases from the text. JSON only, no fences:
 [{"name":"...","search_phrases":["..."],"meeting_ids":[123]}]
 
 `;
@@ -155,6 +198,11 @@ function mergeThemesLocally(rawThemes) {
     tokenize([t.name, ...(t.search_phrases || [])].join(' '))
   );
 
+  // Normalized names for substring matching
+  const normNames = rawThemes.map(t =>
+    (t.name || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  );
+
   // Union-find
   const par = rawThemes.map((_, i) => i);
   const find = i => par[i] === i ? i : (par[i] = find(par[i]));
@@ -163,9 +211,20 @@ function mergeThemesLocally(rawThemes) {
   for (let i = 0; i < rawThemes.length; i++) {
     for (let j = i + 1; j < rawThemes.length; j++) {
       if (find(i) === find(j)) continue;
+
+      // Name substring: if one name contains the other (e.g., "PandaDoc" in "PandaDoc Integration")
+      if (normNames[i].length > 3 && normNames[j].length > 3) {
+        if (normNames[i].includes(normNames[j]) || normNames[j].includes(normNames[i])) {
+          union(i, j); continue;
+        }
+      }
+
+      // Name token similarity (lowered threshold)
       const nameSim = jaccard(tokenize(rawThemes[i].name), tokenize(rawThemes[j].name));
-      if (nameSim >= 0.5) { union(i, j); continue; }
-      if (jaccard(tokenSets[i], tokenSets[j]) >= 0.25) union(i, j);
+      if (nameSim >= 0.35) { union(i, j); continue; }
+
+      // Full token set similarity (lowered threshold)
+      if (jaccard(tokenSets[i], tokenSets[j]) >= 0.18) union(i, j);
     }
   }
 
@@ -238,48 +297,43 @@ JSON only, no fences:
 //  and "Salesforce Data Cleanup" are the same initiative)
 // ══════════════════════════════════════════════════════════════
 
-async function consolidateThemes(perplexityKey, enrichedThemes) {
-  if (enrichedThemes.length <= 1) return enrichedThemes;
-
-  const themeList = enrichedThemes.map((t, i) =>
-    `${i}. "${t.name}" — ${(t.description || '').substring(0, 80)} (${(t.meetings || []).length} meetings)`
+// Single consolidation pass — returns merged theme array
+async function consolidatePass(perplexityKey, themes) {
+  const themeList = themes.map((t, i) =>
+    `${i}. "${t.name}" — ${(t.description || '').substring(0, 60)} (${(t.meetings || []).length} mtgs)`
   ).join('\n');
 
-  const prompt = `You are a product manager organizing ${enrichedThemes.length} themes from meetings at Kaufman Rossin (professional services firm). Your job is TWO things:
+  const prompt = `You are a PM at Kaufman Rossin ruthlessly organizing ${themes.length} themes. MERGE AGGRESSIVELY.
 
-1. MERGE themes that are really the same work stream. Be AGGRESSIVE — if two themes touch the same system, process, or initiative, merge them. A PM should not see "Salesforce Data Sync" and "CRM Pipeline Automation" as separate items. Aim for 5-10 final themes max.
+RULES — when in doubt, MERGE:
+- Same tool/system = ONE theme (all PandaDoc items = one, all Salesforce items = one, all STAR items = one)
+- Same business process = ONE theme (client onboarding, new client acceptance, conflict checks = one)
+- Sub-task or different angle of the same initiative = MERGE into parent
+- Overlapping participants + overlapping systems = probably the same thing
+- "Integration" between two systems = merge into whichever system is the bigger initiative
+- ONLY keep separate if a PM would assign them to DIFFERENT teams with DIFFERENT goals
 
-2. CATEGORIZE each final theme into a strategic category (e.g., "Data & Integration", "Security & Compliance", "Client Experience", "AI & Automation", "Operations").
+TARGET: ${Math.max(5, Math.ceil(themes.length / 6))}-${Math.max(8, Math.ceil(themes.length / 3))} final themes. If you produce more than ${Math.ceil(themes.length / 2)}, you are not merging enough.
+
+CATEGORIZE each into: "Data & Integration", "Security & Compliance", "Client Experience", "AI & Automation", "Operations & Process", or another fitting category.
 
 THEMES:
 ${themeList}
 
-Merge rules:
-- Same system or tool = merge (e.g., anything about Salesforce = one theme)
-- Same business process = merge (e.g., client onboarding steps = one theme)
-- Sub-task of another = merge into the parent
-- Only keep separate if a PM would genuinely track them as independent projects
-
 JSON only, no fences:
-[{
-  "name": "Merged Theme Name",
-  "category": "Strategic Category",
-  "merge_indices": [0, 3, 7],
-  "description": "1-2 sentence description of the combined initiative"
-}]
+[{"name":"Merged Theme","category":"Category","merge_indices":[0,3,7],"description":"1-2 sentences"}]
 
-Every index (0-${enrichedThemes.length - 1}) must appear in exactly one group.`;
+EVERY index (0-${themes.length - 1}) must appear in exactly ONE group.`;
 
-  const raw = await perplexityCall(perplexityKey, prompt, 2000);
+  const raw = await perplexityCall(perplexityKey, prompt, 2500);
   const groups = JSON.parse(raw);
   if (!Array.isArray(groups)) throw new Error('Consolidate response not an array');
 
   return groups.map(group => {
     const indices = group.merge_indices || [];
-    const sources = indices.map(i => enrichedThemes[i]).filter(Boolean);
+    const sources = indices.map(i => themes[i]).filter(Boolean);
     if (!sources.length) return null;
 
-    // Combine meetings, dedup
     const seenIds = new Set();
     const allMeetings = [];
     sources.forEach(s => {
@@ -294,16 +348,10 @@ Every index (0-${enrichedThemes.length - 1}) must appear in exactly one group.`;
 
     const allPhrases = [...new Set(sources.flatMap(s => s.search_phrases || []))];
 
-    // Use LLM-provided description if available, else combine source descriptions
     let desc = group.description || '';
     if (!desc) {
       sources.sort((a, b) => (b.description || '').length - (a.description || '').length);
       desc = sources[0]?.description || '';
-      sources.slice(1).forEach(s => {
-        if (s.description && !desc.includes(s.description.substring(0, 30))) {
-          desc += ' ' + s.description;
-        }
-      });
     }
     if (desc.length > 400) desc = desc.substring(0, 397) + '...';
 
@@ -315,6 +363,34 @@ Every index (0-${enrichedThemes.length - 1}) must appear in exactly one group.`;
       meetings: allMeetings
     };
   }).filter(Boolean);
+}
+
+// Iterative consolidation — keeps running until theme count stabilizes
+async function consolidateThemes(perplexityKey, enrichedThemes, statusFn) {
+  if (enrichedThemes.length <= 1) return enrichedThemes;
+
+  let current = enrichedThemes;
+  const MAX_PASSES = 3;
+
+  for (let pass = 1; pass <= MAX_PASSES; pass++) {
+    const beforeCount = current.length;
+    if (statusFn) statusFn(`Consolidation pass ${pass}: ${beforeCount} themes...`);
+
+    try {
+      current = await consolidatePass(perplexityKey, current);
+    } catch (e) {
+      console.warn(`Consolidation pass ${pass} failed:`, e.message);
+      break;
+    }
+
+    const afterCount = current.length;
+    console.log(`Consolidation pass ${pass}: ${beforeCount} → ${afterCount} themes`);
+
+    // Stop if we've converged (less than 20% reduction) or hit target range
+    if (afterCount >= beforeCount * 0.8 || afterCount <= 12) break;
+  }
+
+  return current;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -374,11 +450,11 @@ async function synthesizeTopicsWithLLM(perplexityKey, statusFn) {
     }));
   }
 
-  // ── CONSOLIDATE (always run — let LLM judge semantic overlap) ──
+  // ── CONSOLIDATE (iterative — keeps merging until stable) ──
   if (enriched.length > 1) {
     if (statusFn) statusFn(`Consolidating ${enriched.length} themes into coherent initiatives...`);
     try {
-      const consolidated = await consolidateThemes(perplexityKey, enriched);
+      const consolidated = await consolidateThemes(perplexityKey, enriched, statusFn);
       if (statusFn) statusFn(`${consolidated.length} final themes.`);
       return consolidated;
     } catch (e) {
