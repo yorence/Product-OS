@@ -97,7 +97,7 @@ function showMeetingDetail(recordingId) {
   }
 
   const mTopics = STATE.topics.filter(t => t.videoIds.includes(m.recording_id));
-  const topicTags = mTopics.map(t => `<span class="tag" style="background:${t.color}20;color:${t.color};border:1px solid ${t.color}40;cursor:pointer" onclick="showTopicDetail(${t.id})">${t.name}</span>`).join(' ');
+  const topicTags = mTopics.map(t => `<span class="tag" style="background:${t.color}20;color:${t.color};border:1px solid ${t.color}40;cursor:pointer" onclick="showView('project-${t.id}')">${t.name}</span>`).join(' ');
 
   panel.innerHTML = `
     <div class="meeting-detail-header">
@@ -182,7 +182,7 @@ function renderTopicsGrid() {
       const m = STATE.meetings.find(x => x.recording_id === id);
       return m ? (m.title || 'Untitled').substring(0, 30) : 'Unknown';
     });
-    html += `<div class="topic-card" onclick="showTopicDetail(${t.id})">
+    html += `<div class="topic-card" onclick="showView('project-${t.id}')">
       <div class="topic-color" style="background:${t.color}"></div>
       <h3>${esc(t.name)}</h3>
       <div class="topic-meta">
@@ -197,59 +197,4 @@ function renderTopicsGrid() {
   container.innerHTML = html;
 }
 
-function showTopicDetail(topicId) {
-  const t = STATE.topics.find(x => x.id === topicId);
-  if (!t) return;
-  document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
-  const panel = document.getElementById('view-topic-detail');
-  panel.classList.remove('hidden');
-  document.getElementById('viewTitle').textContent = t.name;
-
-  // Group segments by meeting
-  const byMeeting = {};
-  t.segments.forEach(s => {
-    if (!byMeeting[s.meetingId]) byMeeting[s.meetingId] = { title: s.meetingTitle, url: s.meetingUrl, date: s.meetingDate, relevance: s.relevance || '', segments: [] };
-    byMeeting[s.meetingId].segments.push(s);
-  });
-
-  let segHtml = '';
-  Object.entries(byMeeting).forEach(([mid, group]) => {
-    const date = new Date(group.date);
-    // Show the AI-generated relevance description first, then transcript excerpts
-    segHtml += `<div class="segment-card">
-      <div class="segment-header">
-        <div>
-          <div class="video-title" style="cursor:pointer" onclick="showMeetingDetail(${mid})">${esc(group.title)}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
-        </div>
-        ${group.url && group.url !== '#' ? `<a href="${group.url}" target="_blank" class="segment-link" style="margin:0">Watch on Fathom &#8594;</a>` : ''}
-      </div>
-      <div class="segment-body">
-        ${group.relevance ? `<div class="segment-description" style="border-left:3px solid var(--green);padding-left:12px;margin-bottom:1rem">${esc(group.relevance)}</div>` : ''}
-        <details style="margin-top:.5rem">
-          <summary style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:4px 0">Transcript Excerpts (${group.segments.length})</summary>
-          <div style="margin-top:.5rem">
-            ${group.segments.map(s => {
-              const lines = (s.lines||[]).map(l =>
-                `<div><span class="timestamp">${l.timestamp||''}</span> <span class="speaker">${esc(l.speaker?.display_name||'')}</span>: ${esc(l.text)}</div>`
-              ).join('');
-              return `<div class="segment-transcript" style="margin-bottom:.5rem"><div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">${s.startTime} &ndash; ${s.endTime}</div>${lines}</div>`;
-            }).join('')}
-          </div>
-        </details>
-      </div>
-    </div>`;
-  });
-
-  panel.innerHTML = `
-    <div class="topic-detail-header">
-      <h2><button class="back-btn" onclick="showView('topics')">&larr;</button> <span style="display:inline-block;width:14px;height:14px;background:${t.color};margin-right:.3rem"></span> ${esc(t.name)}</h2>
-      ${t.description ? `<p style="margin-top:.5rem;font-size:15px;color:var(--text-light);line-height:1.6;max-width:700px">${esc(t.description)}</p>` : ''}
-      <div style="margin-top:.5rem;display:flex;gap:1rem;font-size:14px;color:var(--text-light)">
-        <span><strong>${t.videoCount}</strong> meeting${t.videoCount!==1?'s':''}</span>
-        <span><strong>${t.segments.length}</strong> transcript segments</span>
-      </div>
-    </div>
-    <div class="segment-list">${segHtml}</div>
-  `;
-}
+// showTopicDetail removed — theme cards now navigate directly to project pages
