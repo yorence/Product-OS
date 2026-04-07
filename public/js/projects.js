@@ -42,7 +42,7 @@ function renderProjectPage(topicId) {
 
   const artifactContent = artifactTabs.map(a => {
     const content = hasDocs && docs[a]
-      ? (a === 'prep' ? renderPrepArtifact(docs[a]) : a === 'value' ? renderBusinessCase(docs[a]) : `<div class="proj-artifact">${simpleMarkdown(docs[a])}</div>`)
+      ? (a === 'prep' ? renderPrepArtifact(docs[a]) : a === 'value' ? renderBusinessCase(docs[a]) : renderStructuredDoc(docs[a], artifactLabels[a]))
       : `<div class="proj-gen-banner">
           <h4>${artifactLabels[a]}</h4>
           <p>Generate AI-powered ${artifactLabels[a].toLowerCase()} for this initiative using meeting context.</p>
@@ -58,10 +58,16 @@ function renderProjectPage(topicId) {
         <h2 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin:0">${esc(t.name)}</h2>
       </div>
       ${t.description ? `<p style="font-size:15px;color:var(--text-light);line-height:1.6;max-width:700px">${esc(t.description)}</p>` : ''}
-      <div style="margin-top:.5rem;display:flex;gap:1rem;font-size:14px;color:var(--text-light)">
+      <div style="margin-top:.5rem;display:flex;gap:1rem;font-size:14px;color:var(--text-light);align-items:center;flex-wrap:wrap">
         <span><strong>${t.videoCount}</strong> meeting${t.videoCount!==1?'s':''}</span>
         <span><strong>${t.segments.length}</strong> transcript segments</span>
         ${hasDocs ? '<span class="tag tag-green">Docs Generated</span>' : ''}
+        ${typeof computeStatus === 'function' ? (() => {
+          const ps = computeStatus(topicId);
+          const canToggle = ps !== 'blocked';
+          const btnLabel = ps === 'ready' ? 'Start' : ps === 'in_progress' ? 'Complete' : ps === 'done' ? 'Reopen' : '';
+          return statusBadgeHtml(ps) + (canToggle && btnLabel ? ` <button class="btn btn-secondary btn-sm" onclick="toggleInitiativeStatus(${topicId},event)">${btnLabel}</button>` : '');
+        })() : ''}
       </div>
     </div>
     ${tabButtons}
@@ -115,6 +121,87 @@ function buildTopicOverviewHtml(t) {
     </div>`;
   });
   return html;
+}
+
+// Generate ONLY the business case (value) for a single theme — lightweight prompt
+async function generateValueOnly(topicId) {
+  const t = STATE.topics.find(x => x.id === topicId);
+  if (!t || !STATE.perplexityKey) return;
+  if (STATE.projectDocs?.[topicId]?.value?.score) return; // already scored
+
+  const otherThemes = STATE.topics.filter(x => x.id !== topicId).map(x =>
+    `- "${x.name}": ${x.description || 'No description'}`
+  ).join('\n');
+
+  const relatedMeetingIds = new Set(t.segments.map(s => s.meetingId));
+  const meetingSummaries = STATE.meetings
+    .filter(m => relatedMeetingIds.has(m.recording_id))
+    .map(m => {
+      const title = m.title || m.meeting_title || 'Untitled';
+      const summary = m.default_summary?.markdown_formatted || '';
+      return summary ? `[${title}]\n${summary.substring(0, 200)}` : '';
+    }).filter(Boolean).join('\n\n').substring(0, 1500);
+
+  const prompt = `You are scoring the business value of an initiative at Kaufman Rossin (professional services firm).
+
+INITIATIVE: ${t.name}
+DESCRIPTION: ${t.description || 'See context below.'}
+
+OTHER ACTIVE INITIATIVES (for dependency analysis):
+${otherThemes}
+
+MEETING CONTEXT:
+${meetingSummaries}
+
+FIRM POLICIES (abbreviated):
+${getPoliciesContext().substring(0, 800)}
+
+Generate a business case assessment. Use web search for 2-3 supporting research findings.
+
+JSON only, no fences:
+{
+  "score": 8,
+  "score_rationale": "Why this score (1-10) based on business impact, urgency, strategic alignment",
+  "effort": 6,
+  "effort_rationale": "Why this effort score (0=hardest, 10=easiest). Consider complexity, dependencies, unknowns.",
+  "confidence": 7,
+  "confidence_rationale": "Why this confidence (0=lowest, 10=highest certainty value will be realized).",
+  "business_impact": "2-3 sentences on revenue/efficiency/risk/client impact",
+  "research": [{"finding":"...","source":"...","url":"...","relevance":"..."}],
+  "roi_estimate": "Qualitative/quantitative ROI estimate",
+  "blocks": ["Names of OTHER initiatives this one blocks/is prerequisite for"],
+  "blocked_by": ["Names of OTHER initiatives that must happen before this one"],
+  "risks_of_inaction": "Consequences if not pursued"
+}`;
+
+  const raw = await perplexityCall(STATE.perplexityKey, prompt, 2000);
+  const value = JSON.parse(raw);
+
+  if (!STATE.projectDocs[topicId]) STATE.projectDocs[topicId] = {};
+  STATE.projectDocs[topicId].value = value;
+  try { sessionStorage.setItem('project_docs', JSON.stringify(STATE.projectDocs)); } catch(e) {}
+}
+
+// Auto-score ALL unscored themes — triggered on first doc generation
+async function batchScoreAllThemes(statusFn) {
+  const unscored = STATE.topics.filter(t => !STATE.projectDocs?.[t.id]?.value?.score);
+  if (!unscored.length) return;
+
+  let done = 0;
+  const tasks = unscored.map(t => () =>
+    generateValueOnly(t.id)
+      .catch(err => { console.warn(`Score failed for "${t.name}":`, err.message); })
+  );
+
+  await runPool(tasks, 3, () => {
+    done++;
+    if (statusFn) statusFn(`Scoring ${done}/${unscored.length} themes...`);
+  });
+
+  computeCriticalPath();
+
+  if (STATE.currentView === 'topics') renderTopicsGrid();
+  if (STATE.currentView === 'pipeline') renderPipeline();
 }
 
 async function generateProjectDocs(topicId) {
@@ -204,6 +291,10 @@ The value assessment provides business justification backed by real research. Yo
 {
   "score": 8,
   "score_rationale": "Why this score (1-10) based on business impact, urgency, and strategic alignment",
+  "effort": 6,
+  "effort_rationale": "Why this effort score (0-10 where 0=most effort/hardest and 10=least effort/easiest). Consider team size, technical complexity, dependencies, timeline, and unknowns discussed in the transcripts.",
+  "confidence": 7,
+  "confidence_rationale": "Why this confidence score (0-10 where 10=highest certainty the value will be realized, 0=lowest). Consider how well-defined the requirements are, team readiness, prior art, and risks mentioned.",
   "business_impact": "2-3 sentences on how this initiative impacts revenue, efficiency, risk, or client satisfaction",
   "research": [
     { "finding": "Specific statistic or finding from industry research", "source": "Name of publication, firm, or study", "url": "URL to the source if available", "relevance": "How this applies to this initiative" }
@@ -214,6 +305,7 @@ The value assessment provides business justification backed by real research. Yo
   "risks_of_inaction": "What happens if this initiative is NOT pursued — specific consequences based on what was discussed"
 }
 IMPORTANT: Use your web search to find 2-4 real research findings (from Gartner, McKinsey, Deloitte, AICPA, accounting industry reports, etc.) that support the business value of this type of initiative. Be specific with statistics and citations.
+The ICE score (Impact × Confidence × Ease) will be computed client-side from score, confidence, and effort.
 
 ARTIFACTS 3-7 — Standard project docs (brief, roadmap, security, pipeline, process).
 
@@ -248,7 +340,7 @@ graph LR
 RESPOND WITH VALID JSON ONLY (no markdown fences around the JSON itself):
 {
   "prep": { "emails": [...], "conversations": [...], "action_items": [...], "discussion_topics": [...], "suggested_attendees": [...] },
-  "value": { "score": 8, "score_rationale": "...", "business_impact": "...", "research": [...], "roi_estimate": "...", "blocks": [...], "blocked_by": [...], "risks_of_inaction": "..." },
+  "value": { "score": 8, "score_rationale": "...", "effort": 6, "effort_rationale": "...", "confidence": 7, "confidence_rationale": "...", "business_impact": "...", "research": [...], "roi_estimate": "...", "blocks": [...], "blocked_by": [...], "risks_of_inaction": "..." },
   "brief": "## Problem\\n...\\n## Target User\\n...\\n## User Stories\\n...\\n## Success Metrics\\n...\\n## Risks\\n...",
   "roadmap": "## P0 — Must Do\\n...\\n## P1 — Should Do\\n...\\n## P2 — Nice to Have\\n...",
   "security": "## Security Considerations\\n(Reference the firm's WISP and Records Retention Policy provided above)\\n## Risks\\n...\\n## Compliance Requirements\\n...\\n## Recommendations\\n...",
@@ -290,6 +382,9 @@ IMPORTANT: In the markdown artifacts (brief, roadmap, security, pipeline, proces
 
     // Re-render the project page with the generated docs
     renderProjectPage(topicId);
+
+    // Auto-score all other themes in background
+    batchScoreAllThemes();
   } catch (e) {
     artifactTabs.forEach(a => {
       const el = document.getElementById(`ptab-${a}-${topicId}`);

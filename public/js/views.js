@@ -7,10 +7,16 @@ function showView(view) {
   const btn = document.querySelector(`[data-view="${view}"]`);
   if (btn) btn.classList.add('active');
 
-  const titles = { meetings:'All Meetings', topics:'Themes Index', graph3d:'Knowledge Graph', policies:'Firm Policies' };
+  const titles = { meetings:'All Meetings', topics:'Themes Index', pipeline:'Initiative Pipeline', graph3d:'Knowledge Graph', policies:'Firm Policies' };
 
   // Handle project-N views
   if (view.startsWith('project-')) {
+    // Block project navigation while themes are still being synthesized
+    if (STATE.isSynthesizing) {
+      document.getElementById('viewTitle').textContent = 'Themes Index';
+      document.getElementById('view-topics').classList.remove('hidden');
+      return;
+    }
     const topicId = parseInt(view.replace('project-', ''));
     const topic = STATE.topics.find(t => t.id === topicId);
     document.getElementById('viewTitle').textContent = topic ? topic.name : 'Project';
@@ -25,6 +31,7 @@ function showView(view) {
 
   if (view === 'meetings') renderMeetings();
   else if (view === 'topics') renderTopics();
+  else if (view === 'pipeline') renderPipeline();
   else if (view === 'graph3d') renderGraph3D();
   else if (view === 'policies') showPolicy('retention');
 }
@@ -160,6 +167,9 @@ function renderTopics() {
   const stats = document.getElementById('topicStats');
   const container = document.getElementById('topicsContainer');
 
+  // Don't overwrite the synthesis pipeline UI if it's running
+  if (STATE.isSynthesizing) return;
+
   // Check if topics already unlocked
   if (STATE.topicsUnlocked && STATE.topics.length) {
     renderTopicsGrid();
@@ -242,78 +252,208 @@ function renderTopics() {
   }
 }
 
+// Helper: compute ICE for a theme
+function getThemeICE(t) {
+  const bv = STATE.projectDocs?.[t.id]?.value || {};
+  const score = bv.score || 0;
+  const effort = bv.effort ?? null;
+  const confidence = bv.confidence ?? null;
+  return (score && effort !== null && confidence !== null)
+    ? +((score + effort + confidence) / 3).toFixed(1) : null;
+}
+
 function renderTopicsGrid() {
   const stats = document.getElementById('topicStats');
   const container = document.getElementById('topicsContainer');
   const totalSegs = STATE.topics.reduce((s,t) => s+t.segments.length, 0);
+  const hasScores = STATE.topics.some(t => STATE.projectDocs?.[t.id]?.value?.score);
+  const scored = hasScores ? STATE.topics.filter(t => STATE.projectDocs?.[t.id]?.value?.score).length : 0;
+  const categories = [...new Set(STATE.topics.map(t => t.category || 'General'))];
+
   stats.innerHTML = `
     <div class="stat-card"><div class="label">Themes</div><div class="value">${STATE.topics.length}</div></div>
-    <div class="stat-card"><div class="label">Segments</div><div class="value">${totalSegs}</div></div>
-    <div class="stat-card"><div class="label">Meetings</div><div class="value">${STATE.meetings.filter(m=>m.transcript&&m.transcript.length).length}</div></div>
+    <div class="stat-card"><div class="label">Categories</div><div class="value">${categories.length}</div></div>
     <div class="stat-card"><div class="label">Cross-Meeting</div><div class="value">${STATE.topics.filter(t=>t.videoCount>1).length}</div><div class="sub">Spanning 2+ meetings</div></div>
+    <div class="stat-card"><div class="label">Scored</div><div class="value">${scored}/${STATE.topics.length}</div><div class="sub">${scored ? 'Generate docs for more' : 'Generate project docs to score'}</div></div>
   `;
 
-  // Check if any themes have business value scores (from generated project docs)
-  const hasScores = STATE.topics.some(t => STATE.projectDocs?.[t.id]?.value?.score);
-
-  let html = '';
-
-  // Priority Matrix (shown if any scores exist)
-  if (hasScores) {
-    const scored = STATE.topics
-      .map(t => ({ ...t, bv: STATE.projectDocs?.[t.id]?.value || {} }))
-      .filter(t => t.bv.score)
-      .sort((a, b) => (b.bv.score || 0) - (a.bv.score || 0));
-
-    if (scored.length) {
-      html += `<div style="margin-bottom:2rem">
-        <h3 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--green-40)">Priority Matrix</h3>`;
-
-      scored.forEach((t, i) => {
-        const score = t.bv.score || 0;
-        const barColor = score >= 7 ? 'var(--green)' : score >= 4 ? '#f39c12' : 'var(--gray-40)';
-        const blockedBy = (t.bv.blocked_by || []);
-        const blocks = (t.bv.blocks || []);
-        html += `<div class="priority-row" onclick="showView('project-${t.id}')">
-          <div class="priority-rank">${i + 1}</div>
-          <div class="value-score ${score >= 7 ? 'value-high' : score >= 4 ? 'value-med' : 'value-low'}" style="width:36px;height:36px;font-size:16px">${score}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--blue);margin-bottom:2px">${esc(t.name)}</div>
-            <div class="priority-bar"><div class="priority-bar-fill" style="width:${score * 10}%;background:${barColor}"></div></div>
-            <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
-              ${blockedBy.map(b => `<span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red);background:#fde8e8;padding:2px 6px">Blocked by: ${esc(b)}</span>`).join('')}
-              ${blocks.map(b => `<span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 6px">Enables: ${esc(b)}</span>`).join('')}
-            </div>
-          </div>
-        </div>`;
-      });
-      html += '</div>';
+  // Sort themes within each category
+  const sort = STATE.themeSort || { col: 'ice', dir: 'desc' };
+  const sortFn = (a, b) => {
+    const bvA = STATE.projectDocs?.[a.id]?.value || {};
+    const bvB = STATE.projectDocs?.[b.id]?.value || {};
+    let va, vb;
+    switch (sort.col) {
+      case 'name':
+        va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+        return sort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      case 'score':
+        va = bvA.score || 0; vb = bvB.score || 0;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      case 'effort':
+        va = bvA.effort ?? -1; vb = bvB.effort ?? -1;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      case 'confidence':
+        va = bvA.confidence ?? -1; vb = bvB.confidence ?? -1;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      case 'ice':
+        va = getThemeICE(a) ?? -1; vb = getThemeICE(b) ?? -1;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      case 'meetings':
+        va = a.videoCount || 0; vb = b.videoCount || 0;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      case 'readiness':
+        const statusOrder = { blocked: 0, ready: 1, in_progress: 2, done: 3 };
+        va = statusOrder[computeStatus(a.id)] ?? 1;
+        vb = statusOrder[computeStatus(b.id)] ?? 1;
+        if (va !== vb) return sort.dir === 'asc' ? va - vb : vb - va;
+        return (getThemeICE(b) ?? -1) - (getThemeICE(a) ?? -1);
+      default:
+        return (getThemeICE(b) ?? -1) - (getThemeICE(a) ?? -1);
     }
-  }
+  };
 
-  // Theme cards grid
-  html += '<div class="topics-grid">';
+  // Group by category
+  const grouped = {};
   STATE.topics.forEach(t => {
-    const videoNames = t.videoIds.map(id => {
-      const m = STATE.meetings.find(x => x.recording_id === id);
-      return m ? (m.title || 'Untitled').substring(0, 30) : 'Unknown';
-    });
-    const bv = STATE.projectDocs?.[t.id]?.value;
-    const scoreHtml = bv?.score ? `<span class="value-score ${bv.score >= 7 ? 'value-high' : bv.score >= 4 ? 'value-med' : 'value-low'}" style="width:28px;height:28px;font-size:13px;position:absolute;top:12px;right:12px">${bv.score}</span>` : '';
-    html += `<div class="topic-card" onclick="showView('project-${t.id}')">
-      <div class="topic-color" style="background:${t.color}"></div>
-      ${scoreHtml}
-      <h3>${esc(t.name)}</h3>
-      <div class="topic-meta">
-        <span>${t.videoCount} meeting${t.videoCount!==1?'s':''}</span>
-        <span>${t.segments.length} segment${t.segments.length!==1?'s':''}</span>
-      </div>
-      <div class="topic-videos">${videoNames.map(n => `<span class="video-tag">${esc(n)}</span>`).join('')}</div>
-      <div class="topic-summary">${esc(t.description || t.segments[0]?.text?.substring(0,180) || '')}${t.description ? '' : '...'}</div>
-    </div>`;
+    const cat = t.category || 'General';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(t);
   });
-  html += '</div>';
+
+  // Sort categories by best ICE/score in group
+  const catOrder = Object.keys(grouped).sort((a, b) => {
+    const bestA = Math.max(...grouped[a].map(t => getThemeICE(t) ?? (STATE.projectDocs?.[t.id]?.value?.score || 0)));
+    const bestB = Math.max(...grouped[b].map(t => getThemeICE(t) ?? (STATE.projectDocs?.[t.id]?.value?.score || 0)));
+    return bestB - bestA;
+  });
+
+  // Sort themes within each category
+  catOrder.forEach(cat => grouped[cat].sort(sortFn));
+
+  const arrow = (col) => sort.col === col ? (sort.dir === 'asc' ? ' &#9650;' : ' &#9660;') : '';
+  const scoreBadgeFn = (v) => v != null && v !== false
+    ? `<span class="value-score ${v >= 7 ? 'value-high' : v >= 4 ? 'value-med' : 'value-low'}" style="width:30px;height:30px;font-size:13px">${v}</span>`
+    : '<span style="color:var(--text-muted);font-size:13px">—</span>';
+
+  // Initialize collapsed state if not set
+  if (!STATE._catCollapsed) STATE._catCollapsed = {};
+
+  let html = `<table class="data-table"><thead><tr>
+    <th style="width:10px"></th>
+    <th class="sortable" onclick="sortThemes('readiness')" style="width:80px">Status${arrow('readiness')}</th>
+    <th class="sortable" onclick="sortThemes('name')">Theme${arrow('name')}</th>
+    <th class="sortable" onclick="sortThemes('ice')" style="width:55px">ICE${arrow('ice')}</th>
+    <th class="sortable" onclick="sortThemes('score')" style="width:55px">Impact${arrow('score')}</th>
+    <th class="sortable" onclick="sortThemes('confidence')" style="width:55px">Conf.${arrow('confidence')}</th>
+    <th class="sortable" onclick="sortThemes('effort')" style="width:55px">Ease${arrow('effort')}</th>
+    <th class="sortable" onclick="sortThemes('meetings')" style="width:55px">Mtgs${arrow('meetings')}</th>
+    <th style="width:150px">Dependencies</th>
+  </tr></thead><tbody>`;
+
+  catOrder.forEach(cat => {
+    const themes = grouped[cat];
+    const collapsed = !!STATE._catCollapsed[cat];
+    const catThemeCount = themes.length;
+    const catAvgIce = themes.reduce((s, t) => s + (getThemeICE(t) || 0), 0) / catThemeCount;
+
+    // Readiness summary for category
+    const catStatuses = themes.map(t => computeStatus(t.id));
+    const catSummary = ['blocked','ready','in_progress','done']
+      .map(s => {
+        const count = catStatuses.filter(x => x === s).length;
+        return count ? `${count} ${STATUS_CONFIG[s].label.toLowerCase()}` : '';
+      }).filter(Boolean).join(', ');
+
+    // Category header row
+    html += `<tr class="cat-row" onclick="toggleCategory('${esc(cat)}')" style="cursor:pointer;background:var(--blue-10);border-top:2px solid var(--blue-20)">
+      <td colspan="3" style="padding:10px 12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--blue);transition:transform var(--fast);transform:rotate(${collapsed ? '0' : '90'}deg)">&#9654;</span>
+          <span style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)">${esc(cat)}</span>
+          <span style="font-family:var(--fd);font-size:11px;font-weight:600;color:var(--blue-60);background:var(--blue-20);padding:2px 8px">${catThemeCount}</span>
+          <span style="font-family:var(--fb);font-size:12px;color:var(--blue-60)">${catSummary}</span>
+        </div>
+      </td>
+      <td style="text-align:center;font-family:var(--fd);font-weight:700;font-size:13px;color:var(--blue)">${catAvgIce ? catAvgIce.toFixed(1) : '—'}</td>
+      <td colspan="5"></td>
+    </tr>`;
+
+    if (collapsed) return;
+
+    // Theme rows
+    themes.forEach(t => {
+      const bv = STATE.projectDocs?.[t.id]?.value || {};
+      const score = bv.score || 0;
+      const effort = bv.effort ?? null;
+      const confidence = bv.confidence ?? null;
+      const ice = getThemeICE(t);
+      const blockedBy = (bv.blocked_by || []);
+      const blocks = (bv.blocks || []);
+      const readiness = computeStatus(t.id);
+
+      // Enhanced dependencies — clickable, resolved/unresolved
+      let depHtml = '';
+      blockedBy.forEach(b => {
+        const bt = findThemeByName(b);
+        const resolved = bt && computeStatus(bt.id) === 'done';
+        if (resolved) {
+          depHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 5px;display:inline-block;margin:1px;text-decoration:line-through;cursor:pointer" onclick="event.stopPropagation();showView('project-${bt.id}')">&#10003; ${esc(b)}</span>`;
+        } else {
+          const click = bt ? `onclick="event.stopPropagation();showView('project-${bt.id}')"` : '';
+          depHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);background:#fde8e8;padding:2px 5px;display:inline-block;margin:1px;${bt ? 'cursor:pointer' : ''}" ${click}>&#9888; ${esc(b)}</span>`;
+        }
+      });
+      blocks.forEach(b => {
+        const et = findThemeByName(b);
+        const click = et ? `onclick="event.stopPropagation();showView('project-${et.id}')"` : '';
+        depHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 5px;display:inline-block;margin:1px;${et ? 'cursor:pointer' : ''}" ${click}>&#10132; ${esc(b)}</span>`;
+      });
+      if (!depHtml) depHtml = '<span style="color:var(--text-muted);font-size:12px">—</span>';
+
+      const iceBadge = ice !== null
+        ? `<span style="font-family:var(--fd);font-weight:800;font-size:15px;color:${ice >= 7 ? 'var(--green-text)' : ice >= 4 ? '#b45309' : 'var(--charcoal)'}">${ice}</span>`
+        : '<span style="color:var(--text-muted);font-size:13px">—</span>';
+
+      html += `<tr onclick="showView('project-${t.id}')" style="cursor:pointer">
+        <td style="padding:6px 4px"><div style="width:5px;height:100%;min-height:28px;background:${t.color}"></div></td>
+        <td style="text-align:center">${statusBadgeHtml(readiness)}</td>
+        <td>
+          <div class="title-cell" style="white-space:normal;max-width:none">${esc(t.name)}</div>
+          <div style="font-size:13px;color:var(--text-light);line-height:1.4;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.description || '')}</div>
+        </td>
+        <td style="text-align:center">${iceBadge}</td>
+        <td style="text-align:center">${scoreBadgeFn(score || null)}</td>
+        <td style="text-align:center">${scoreBadgeFn(confidence)}</td>
+        <td style="text-align:center">${scoreBadgeFn(effort)}</td>
+        <td style="text-align:center;font-family:var(--fd);font-weight:700;font-size:14px;color:var(--charcoal)">${t.videoCount}</td>
+        <td>${depHtml}</td>
+      </tr>`;
+    });
+  });
+
+  html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+// Toggle category collapse
+function toggleCategory(cat) {
+  if (!STATE._catCollapsed) STATE._catCollapsed = {};
+  STATE._catCollapsed[cat] = !STATE._catCollapsed[cat];
+  renderTopicsGrid();
+}
+
+// Sort themes table by column
+function sortThemes(col) {
+  const sort = STATE.themeSort || { col: 'score', dir: 'desc' };
+  if (sort.col === col) {
+    sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sort.col = col;
+    sort.dir = col === 'name' ? 'asc' : 'desc';
+  }
+  STATE.themeSort = sort;
+  renderTopicsGrid();
 }
 
 // Sort meetings table by column

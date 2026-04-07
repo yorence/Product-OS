@@ -348,8 +348,8 @@ function loadDemoData() {
 }
 
 function disconnect() {
-  STATE = { apiKey:'', perplexityKey:'', strategy:'', meetings:[], topics:[], topicsUnlocked:false, projectDocs:{}, currentView:'meetings', isDemo:false, isLoading:false, meetingSort:{col:'date',dir:'desc'} };
-  try { localStorage.removeItem('fathom_cache'); sessionStorage.removeItem('llm_topics'); sessionStorage.removeItem('project_docs'); } catch(e) {}
+  STATE = { apiKey:'', perplexityKey:'', strategy:'', meetings:[], topics:[], topicsUnlocked:false, projectDocs:{}, currentView:'meetings', isDemo:false, isLoading:false, isSynthesizing:false, meetingSort:{col:'date',dir:'desc'}, themeSort:{col:'score',dir:'desc'}, initiativeStatus:{}, criticalPath:[] };
+  try { localStorage.removeItem('fathom_cache'); sessionStorage.removeItem('llm_topics'); sessionStorage.removeItem('project_docs'); sessionStorage.removeItem('initiative_status'); } catch(e) {}
   document.getElementById('sidebar').classList.add('hidden');
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('connectScreen').classList.remove('hidden');

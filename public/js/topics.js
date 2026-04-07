@@ -233,13 +233,98 @@ JSON only, no fences:
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ORCHESTRATOR — Map → Reduce → Enrich (parallel pipeline)
+//  PHASE 4 — CONSOLIDATE: LLM groups semantically related themes
+//  Catches stragglers that Jaccard missed (e.g., "CRM Migration"
+//  and "Salesforce Data Cleanup" are the same initiative)
+// ══════════════════════════════════════════════════════════════
+
+async function consolidateThemes(perplexityKey, enrichedThemes) {
+  if (enrichedThemes.length <= 1) return enrichedThemes;
+
+  const themeList = enrichedThemes.map((t, i) =>
+    `${i}. "${t.name}" — ${(t.description || '').substring(0, 80)} (${(t.meetings || []).length} meetings)`
+  ).join('\n');
+
+  const prompt = `You are a product manager organizing ${enrichedThemes.length} themes from meetings at Kaufman Rossin (professional services firm). Your job is TWO things:
+
+1. MERGE themes that are really the same work stream. Be AGGRESSIVE — if two themes touch the same system, process, or initiative, merge them. A PM should not see "Salesforce Data Sync" and "CRM Pipeline Automation" as separate items. Aim for 5-10 final themes max.
+
+2. CATEGORIZE each final theme into a strategic category (e.g., "Data & Integration", "Security & Compliance", "Client Experience", "AI & Automation", "Operations").
+
+THEMES:
+${themeList}
+
+Merge rules:
+- Same system or tool = merge (e.g., anything about Salesforce = one theme)
+- Same business process = merge (e.g., client onboarding steps = one theme)
+- Sub-task of another = merge into the parent
+- Only keep separate if a PM would genuinely track them as independent projects
+
+JSON only, no fences:
+[{
+  "name": "Merged Theme Name",
+  "category": "Strategic Category",
+  "merge_indices": [0, 3, 7],
+  "description": "1-2 sentence description of the combined initiative"
+}]
+
+Every index (0-${enrichedThemes.length - 1}) must appear in exactly one group.`;
+
+  const raw = await perplexityCall(perplexityKey, prompt, 2000);
+  const groups = JSON.parse(raw);
+  if (!Array.isArray(groups)) throw new Error('Consolidate response not an array');
+
+  return groups.map(group => {
+    const indices = group.merge_indices || [];
+    const sources = indices.map(i => enrichedThemes[i]).filter(Boolean);
+    if (!sources.length) return null;
+
+    // Combine meetings, dedup
+    const seenIds = new Set();
+    const allMeetings = [];
+    sources.forEach(s => {
+      (s.meetings || []).forEach(m => {
+        const mid = typeof m === 'object' ? m.id : m;
+        if (!seenIds.has(mid)) {
+          seenIds.add(mid);
+          allMeetings.push(typeof m === 'object' ? m : { id: m, relevance: '' });
+        }
+      });
+    });
+
+    const allPhrases = [...new Set(sources.flatMap(s => s.search_phrases || []))];
+
+    // Use LLM-provided description if available, else combine source descriptions
+    let desc = group.description || '';
+    if (!desc) {
+      sources.sort((a, b) => (b.description || '').length - (a.description || '').length);
+      desc = sources[0]?.description || '';
+      sources.slice(1).forEach(s => {
+        if (s.description && !desc.includes(s.description.substring(0, 30))) {
+          desc += ' ' + s.description;
+        }
+      });
+    }
+    if (desc.length > 400) desc = desc.substring(0, 397) + '...';
+
+    return {
+      name: group.name || sources[0]?.name || 'Unnamed',
+      category: group.category || 'General',
+      description: desc,
+      search_phrases: allPhrases,
+      meetings: allMeetings
+    };
+  }).filter(Boolean);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ORCHESTRATOR — Map → Reduce → Enrich → Consolidate
 // ══════════════════════════════════════════════════════════════
 
 async function synthesizeTopicsWithLLM(perplexityKey, statusFn) {
   const microBatches = buildMicroBatches(STATE.meetings);
   const total = microBatches.length;
-  const MAX_CONCURRENT = 3; // max parallel API calls to avoid 429s
+  const MAX_CONCURRENT = 3;
 
   // ── MAP (throttled parallel) ──
   if (statusFn) statusFn(`Extracting themes: 0/${total} batches (${STATE.meetings.length} meetings)...`);
@@ -256,24 +341,37 @@ async function synthesizeTopicsWithLLM(perplexityKey, statusFn) {
   });
 
   // ── REDUCE (client-side, instant) ──
-  if (statusFn) statusFn(`REDUCE: Merging ${mapResults.flat().length} raw themes...`);
+  if (statusFn) statusFn(`Merging ${mapResults.flat().length} raw themes...`);
   const merged = mergeThemesLocally(mapResults.flat());
-  if (statusFn) statusFn(`REDUCE: ${merged.length} unique themes. Enriching...`);
+  if (statusFn) statusFn(`${merged.length} unique themes. Enriching...`);
 
   // ── ENRICH (one small call) ──
+  let enriched;
   try {
-    const enriched = await enrichThemes(perplexityKey, merged);
-    return enriched;
+    enriched = await enrichThemes(perplexityKey, merged);
   } catch (e) {
-    // If enrich fails, still return merged themes with empty descriptions
     console.warn('Enrich failed, using raw themes:', e.message);
-    return merged.map(t => ({
+    enriched = merged.map(t => ({
       name: t.name,
       description: '',
       search_phrases: t.search_phrases || [],
       meetings: (t.meeting_ids || []).map(id => ({ id, relevance: '' }))
     }));
   }
+
+  // ── CONSOLIDATE (always run — let LLM judge semantic overlap) ──
+  if (enriched.length > 1) {
+    if (statusFn) statusFn(`Consolidating ${enriched.length} themes into coherent initiatives...`);
+    try {
+      const consolidated = await consolidateThemes(perplexityKey, enriched);
+      if (statusFn) statusFn(`${consolidated.length} final themes.`);
+      return consolidated;
+    } catch (e) {
+      console.warn('Consolidation failed, using enriched themes:', e.message);
+    }
+  }
+
+  return enriched;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -342,6 +440,7 @@ function mapLLMTopicsToSegments(llmTopics) {
       id: idx,
       name: lt.name || 'Unnamed Topic',
       description: lt.description || '',
+      category: lt.category || 'General',
       keyTerms: searchPhrases,
       segments,
       videoCount: [...new Set(videoIds)].length,
@@ -356,34 +455,91 @@ function mapLLMTopicsToSegments(llmTopics) {
 //  ENTRY POINT
 // ══════════════════════════════════════════════════════════════
 
+// Pipeline stage definitions for UI
+const SYNTH_STAGES = [
+  { key: 'map', label: 'Extracting themes from meetings' },
+  { key: 'reduce', label: 'Merging duplicate themes' },
+  { key: 'enrich', label: 'Adding descriptions & context' },
+  { key: 'consolidate', label: 'Grouping related initiatives' },
+  { key: 'assign', label: 'Mapping transcript segments' }
+];
+
+function renderSynthProgress(activeStage, detail) {
+  const container = document.getElementById('topicsContainer');
+  if (!container) return;
+
+  const stagesHtml = SYNTH_STAGES.map((s, i) => {
+    const activeIdx = SYNTH_STAGES.findIndex(x => x.key === activeStage);
+    const isDone = i < activeIdx;
+    const isActive = i === activeIdx;
+    const color = isDone ? 'var(--green-text)' : isActive ? 'var(--blue)' : 'var(--text-muted)';
+    const icon = isDone ? '&#10003;' : isActive ? '<span class="pulse-dot" style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1s infinite;display:inline-block"></span>' : '<span style="width:8px;height:8px;border:2px solid var(--gray-40);display:inline-block"></span>';
+    const weight = isActive ? '700' : '600';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < SYNTH_STAGES.length - 1 ? 'border-bottom:1px solid var(--gray-10);' : ''}">
+      <div style="width:24px;text-align:center;font-size:13px;color:${isDone ? 'var(--green-text)' : 'var(--text-muted)'}">${icon}</div>
+      <div style="font-family:var(--fd);font-size:12px;font-weight:${weight};letter-spacing:.08em;text-transform:uppercase;color:${color}">${s.label}</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="max-width:420px;margin:2rem auto;padding:2rem">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div class="loading-inline"></div>
+        <div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-top:1rem">Synthesizing Themes</div>
+        <div id="topicSynthStatus" style="font-size:14px;color:var(--text-light);margin-top:.5rem">${detail || 'Starting...'}</div>
+      </div>
+      <div style="background:white;border:1px solid var(--border);padding:16px 20px;box-shadow:var(--sh-sm)">
+        ${stagesHtml}
+      </div>
+      <div style="text-align:center;margin-top:1rem;font-size:13px;color:var(--text-muted)">Do not navigate away — synthesis is in progress</div>
+    </div>`;
+}
+
 async function unlockTopics() {
   const keyInput = document.getElementById('perplexityKeyInput');
   const key = keyInput ? keyInput.value.trim() : '';
   if (!key) { alert('Please enter your Perplexity API key.'); return; }
 
   STATE.perplexityKey = key;
-  const container = document.getElementById('topicsContainer');
+  STATE.isSynthesizing = true;
   const stats = document.getElementById('topicStats');
   stats.innerHTML = '';
-  container.innerHTML = '<div style="text-align:center;padding:3rem"><div class="loading-inline"></div><div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-top:1rem">Analyzing meetings with AI...</div><div id="topicSynthStatus" style="font-size:14px;color:var(--text-light);margin-top:.5rem">Preparing pipeline...</div></div>';
 
-  const statusEl = document.getElementById('topicSynthStatus');
-  const statusFn = (msg) => { if (statusEl) statusEl.textContent = msg; };
+  // Show initial pipeline UI
+  renderSynthProgress('map', 'Preparing pipeline...');
+
+  // Status callback updates both the detail text and the active stage
+  const statusFn = (msg) => {
+    const el = document.getElementById('topicSynthStatus');
+    if (el) el.textContent = msg;
+
+    // Detect stage transitions from message content
+    if (msg.includes('Extracting') || msg.includes('batches')) renderSynthProgress('map', msg);
+    else if (msg.includes('Merging') || msg.includes('raw themes')) renderSynthProgress('reduce', msg);
+    else if (msg.includes('Enriching') || msg.includes('unique themes')) renderSynthProgress('enrich', msg);
+    else if (msg.includes('Consolidat')) renderSynthProgress('consolidate', msg);
+    else if (msg.includes('final')) renderSynthProgress('assign', msg);
+  };
 
   try {
     const t0 = performance.now();
     const llmTopics = await synthesizeTopicsWithLLM(key, statusFn);
-    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-    statusFn(`Done — ${llmTopics.length} themes in ${elapsed}s`);
 
+    renderSynthProgress('assign', 'Mapping transcript segments...');
     STATE.topics = mapLLMTopicsToSegments(llmTopics);
+
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+
     STATE.topicsUnlocked = true;
+    STATE.isSynthesizing = false;
     STATE.projectDocs = {};
     document.getElementById('topicCount').textContent = STATE.topics.length;
     try { sessionStorage.setItem('llm_topics', JSON.stringify(STATE.topics)); } catch(e) {}
     populateProjectsSidebar();
     renderTopicsGrid();
   } catch (e) {
+    STATE.isSynthesizing = false;
+    const container = document.getElementById('topicsContainer');
     container.innerHTML = `<div class="callout danger" style="margin:2rem 0"><strong>Theme synthesis failed:</strong> ${esc(e.message)}<br><br>Check your Perplexity API key and try again.</div>`;
   }
 }

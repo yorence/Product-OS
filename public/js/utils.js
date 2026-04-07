@@ -133,11 +133,12 @@ function extractEntityStyles(code) {
 
 function inlineFormat(text) {
   return text
-    // Links: [text](url) -> clickable, but strip the URL noise for readability
+    // Links: [text](url) -> clickable
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, label, url) {
-      // If the label itself is the interesting content, just make it a subtle link
-      if (url.includes('fathom.video')) return '<a href="' + url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--green-40)">' + label + '</a>';
-      return '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>';
+      if (url.includes('fathom.video')) {
+        return '<a href="' + url + '" target="_blank" rel="noopener" class="cite-link"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><polygon points="6,3 13,8 6,13"/></svg>' + label + '</a>';
+      }
+      return '<a href="' + url + '" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;border-bottom:1px solid var(--blue-20)">' + label + '</a>';
     })
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')

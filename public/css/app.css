@@ -120,6 +120,7 @@
   .data-table th { font-family:var(--fd); padding:.65rem 1rem; text-align:left; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.16em; white-space:nowrap; user-select:none; }
   .data-table th.sortable { cursor:pointer; transition:background .15s; }
   .data-table th.sortable:hover { background:rgba(255,255,255,.12); }
+  .data-table .cat-row:hover td { background:var(--blue-20) !important; }
   .data-table td { padding:.6rem 1rem; border-top:1px solid var(--gray-10); font-size:15px; }
   .data-table tr:hover td { background:var(--bg); }
   .data-table tr { cursor:pointer; transition:background var(--fast); }
@@ -269,7 +270,7 @@
   .action-cite { margin-top:4px; }
 
   /* ── Citation Links ── */
-  .cite-link { font-family:var(--fd); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--green-text); text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:var(--green-10); border:1px solid var(--green-40); transition:all var(--fast); }
+  .cite-link { font-family:var(--fd); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--green-text); text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; margin:0 2px; background:var(--green-10); border:1px solid var(--green-40); transition:all var(--fast); vertical-align:middle; }
   .cite-link:hover { background:var(--green-20); color:var(--blue); }
   .cite-link svg { width:12px; height:12px; }
 
@@ -365,13 +366,33 @@
   .callout.danger { background:#fde8e8; border-left-color:var(--red); }
   pre { background:var(--charcoal); color:rgba(255,255,255,.8); padding:1.5rem; overflow-x:auto; font-family:'Cascadia Code','Fira Code','Consolas',monospace; font-size:.78rem; line-height:1.5; margin:1rem 0; }
 
+  /* ── Kanban Board ── */
+  .kanban { display:grid; grid-template-columns:repeat(4,1fr); gap:2px; background:var(--gray-20); margin-bottom:2rem; }
+  .kanban-col { background:var(--bg); min-height:200px; display:flex; flex-direction:column; }
+  .kanban-col-header { padding:12px 16px; background:white; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .kanban-col-title { font-family:var(--fd); font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+  .kanban-col-count { font-family:var(--fd); font-size:11px; font-weight:600; padding:2px 8px; background:var(--gray-10); color:var(--text-light); }
+  .kanban-cards { padding:8px; flex:1; display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:400px; }
+  .kanban-card { background:white; border:1px solid var(--border); box-shadow:var(--sh-sm); padding:12px; cursor:pointer; transition:box-shadow var(--fast),transform var(--fast); display:flex; gap:10px; }
+  .kanban-card:hover { box-shadow:var(--sh-md); transform:translateY(-1px); }
+  .kanban-card-color { width:5px; flex-shrink:0; align-self:stretch; }
+  .kanban-card-body { flex:1; min-width:0; }
+  .kanban-card-name { font-family:var(--fd); font-size:13px; font-weight:700; color:var(--blue); margin-bottom:4px; }
+  .kanban-card-meta { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .kanban-card-cat { font-family:var(--fd); font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+  .kanban-card-btn { font-family:var(--fd); font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:4px 10px; border:none; cursor:pointer; transition:all var(--fast); margin-top:8px; }
+
   /* ── Responsive ── */
   @media(max-width:900px) {
     .sidebar { transform:translateX(-100%); }
     .sidebar.open { transform:translateX(0); }
     .main { margin-left:0; }
     .content { padding:1rem; }
+    .kanban { grid-template-columns:1fr 1fr; }
     .topbar { padding:.7rem 1rem; }
+  }
+  @media(max-width:600px) {
+    .kanban { grid-template-columns:1fr; }
   }
   @media print {
     .sidebar,.topbar { display:none; }

@@ -70,11 +70,16 @@ let STATE = {
   currentView: 'meetings',
   isDemo: false,
   isLoading: false,
-  meetingSort: { col: 'date', dir: 'desc' }
+  isSynthesizing: false,
+  meetingSort: { col: 'date', dir: 'desc' },
+  themeSort: { col: 'score', dir: 'desc' },
+  initiativeStatus: {},  // { [themeId]: 'in_progress' | 'done' }
+  criticalPath: []       // [themeId, ...] ordered chain
 };
 
-// Restore cached project docs
+// Restore cached project docs and initiative statuses
 try { const pd = sessionStorage.getItem('project_docs'); if (pd) STATE.projectDocs = JSON.parse(pd); } catch(e) {}
+try { const is = sessionStorage.getItem('initiative_status'); if (is) STATE.initiativeStatus = JSON.parse(is); } catch(e) {}
 
 const TOPIC_COLORS = ['#3498db','#e74c3c','#2ecc71','#9b59b6','#e67e22','#1abc9c','#34495e','#f39c12','#d35400','#16a085','#8e44ad','#c0392b','#27ae60','#2980b9','#f1c40f'];
 

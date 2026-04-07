@@ -99,14 +99,35 @@ function renderBusinessCase(val) {
 
   let html = '';
   const score = val.score || 0;
-  const scoreClass = score >= 7 ? 'value-high' : score >= 4 ? 'value-med' : 'value-low';
+  const effort = val.effort ?? null;
+  const confidence = val.confidence ?? null;
+  const ice = (score && effort !== null && confidence !== null)
+    ? +((score + effort + confidence) / 3).toFixed(1)
+    : null;
 
-  // Score + Impact header
-  html += `<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:1.5rem">
-    <div class="value-score ${scoreClass}">${score}</div>
-    <div style="flex:1">
-      <div style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:4px">Business Value Score</div>
-      <div style="font-size:15px;color:var(--text);line-height:1.6">${esc(val.score_rationale || '')}</div>
+  const scoreClass = v => v >= 7 ? 'value-high' : v >= 4 ? 'value-med' : 'value-low';
+
+  // Score cards row
+  html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
+    <div style="background:white;border:1px solid var(--border);padding:14px;box-shadow:var(--sh-sm)">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-light);margin-bottom:6px">Impact</div>
+      <div class="value-score ${scoreClass(score)}" style="width:40px;height:40px;font-size:18px">${score}</div>
+      <div style="font-size:13px;color:var(--text-light);margin-top:6px;line-height:1.45">${esc((val.score_rationale || '').substring(0, 120))}${(val.score_rationale || '').length > 120 ? '...' : ''}</div>
+    </div>
+    <div style="background:white;border:1px solid var(--border);padding:14px;box-shadow:var(--sh-sm)">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-light);margin-bottom:6px">Confidence</div>
+      ${confidence !== null ? `<div class="value-score ${scoreClass(confidence)}" style="width:40px;height:40px;font-size:18px">${confidence}</div>
+      <div style="font-size:13px;color:var(--text-light);margin-top:6px;line-height:1.45">${esc((val.confidence_rationale || '').substring(0, 120))}${(val.confidence_rationale || '').length > 120 ? '...' : ''}</div>` : '<div style="color:var(--text-muted);font-size:14px">—</div>'}
+    </div>
+    <div style="background:white;border:1px solid var(--border);padding:14px;box-shadow:var(--sh-sm)">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-light);margin-bottom:6px">Ease</div>
+      ${effort !== null ? `<div class="value-score ${scoreClass(effort)}" style="width:40px;height:40px;font-size:18px">${effort}</div>
+      <div style="font-size:13px;color:var(--text-light);margin-top:6px;line-height:1.45">${esc((val.effort_rationale || '').substring(0, 120))}${(val.effort_rationale || '').length > 120 ? '...' : ''}</div>` : '<div style="color:var(--text-muted);font-size:14px">—</div>'}
+    </div>
+    <div style="background:${ice && ice >= 7 ? 'var(--green-10)' : ice && ice >= 4 ? '#fff8ec' : 'var(--gray-10)'};border:1px solid var(--border);padding:14px;box-shadow:var(--sh-sm)">
+      <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${ice && ice >= 7 ? 'var(--green-text)' : ice && ice >= 4 ? '#b45309' : 'var(--text-light)'};margin-bottom:6px">ICE Score</div>
+      ${ice !== null ? `<div style="font-family:var(--fd);font-weight:800;font-size:28px;color:${ice >= 7 ? 'var(--green-text)' : ice >= 4 ? '#b45309' : 'var(--charcoal)'}">${ice}</div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:6px">(Impact + Confidence + Ease) / 3</div>` : '<div style="color:var(--text-muted);font-size:14px">—</div>'}
     </div>
   </div>`;
 
@@ -163,4 +184,76 @@ function renderBusinessCase(val) {
   }
 
   return html || '<div class="proj-artifact"><p style="color:var(--text-muted)">No business case generated.</p></div>';
+}
+
+// ═══════ STRUCTURED DOCUMENT RENDERER ═══════
+// Renders brief, roadmap, security docs in card-based layout (matching business case style)
+
+function renderStructuredDoc(md, title) {
+  if (!md) return '<div class="proj-artifact"><p style="color:var(--text-muted)">No content generated.</p></div>';
+  if (typeof md !== 'string') return `<div class="proj-artifact">${simpleMarkdown(String(md))}</div>`;
+
+  // Extract H1 title and pre-section metadata
+  let docTitle = '';
+  const metaLines = [];
+  const sections = [];
+  let currentSection = null;
+
+  md.split('\n').forEach(line => {
+    // Capture H1 as document title (only first one)
+    const h1Match = line.match(/^# (.+)/);
+    if (h1Match && !docTitle) {
+      docTitle = h1Match[1];
+      return;
+    }
+
+    // Split on H2 headings
+    const h2Match = line.match(/^## (.+)/);
+    if (h2Match) {
+      if (currentSection) sections.push(currentSection);
+      currentSection = { title: h2Match[1], lines: [] };
+      return;
+    }
+
+    if (currentSection) {
+      currentSection.lines.push(line);
+    } else if (line.trim()) {
+      // Pre-section metadata (version, scope, etc.)
+      metaLines.push(line);
+    }
+  });
+  if (currentSection) sections.push(currentSection);
+
+  if (!sections.length) return `<div class="proj-artifact">${simpleMarkdown(md)}</div>`;
+
+  let html = '';
+
+  // Document header card with title + metadata
+  if (docTitle || metaLines.length) {
+    html += `<div style="background:var(--blue);padding:20px 24px;margin-bottom:1rem;box-shadow:var(--sh-sm)">`;
+    if (docTitle) {
+      html += `<div style="font-family:var(--fd);font-size:18px;font-weight:800;letter-spacing:.04em;color:white;margin-bottom:${metaLines.length ? '8px' : '0'}">${esc(docTitle)}</div>`;
+    }
+    if (metaLines.length) {
+      html += `<div style="font-size:14px;color:rgba(255,255,255,.55);line-height:1.6">${simpleMarkdown(metaLines.join('\n'))}</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Section cards
+  sections.forEach(sec => {
+    const body = simpleMarkdown(sec.lines.join('\n'));
+    if (!body.trim()) return;
+
+    html += `<div style="background:white;border:1px solid var(--border);margin-bottom:1rem;box-shadow:var(--sh-sm);overflow:hidden">`;
+    if (sec.title) {
+      html += `<div style="padding:12px 16px;border-bottom:2px solid var(--green-40)">
+        <div style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text)">${esc(sec.title)}</div>
+      </div>`;
+    }
+    html += `<div style="padding:16px;font-size:15px;line-height:1.65;color:var(--text)" class="proj-artifact">${body}</div>`;
+    html += `</div>`;
+  });
+
+  return html || `<div class="proj-artifact">${simpleMarkdown(md)}</div>`;
 }

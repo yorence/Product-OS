@@ -225,7 +225,11 @@ Per Adam Daube (March 30, 2026): "The retention policy is aspirational. A lot of
 function showPolicy(key) {
   const content = document.getElementById('policyContent');
   if (!content) return;
-  content.innerHTML = simpleMarkdown(FIRM_POLICIES[key] || 'Policy not found.');
+  const md = FIRM_POLICIES[key] || 'Policy not found.';
+  // Extract the H1 title if present
+  const titleMatch = md.match(/^# (.+)/m);
+  const title = titleMatch ? titleMatch[1] : key;
+  content.innerHTML = renderStructuredDoc(md, title);
   // Update button states
   document.querySelectorAll('[id^="pol-btn-"]').forEach(b => {
     b.style.borderColor = '';
