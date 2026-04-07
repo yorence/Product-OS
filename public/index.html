@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaufman Rossin — AI & Data Integration Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://unpkg.com/3d-force-graph@1/dist/3d-force-graph.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════ CONNECT SCREEN ═══════ -->
+<div id="connectScreen" class="connect-screen">
+  <div class="connect-card">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="display:inline-flex;align-items:center;gap:0;margin-bottom:.6rem">
+        <span style="font-family:var(--fd);font-weight:800;font-size:20px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)">Kaufman</span>
+        <div style="width:2px;height:22px;background:var(--green);margin:0 8px"></div>
+        <span style="font-family:var(--fd);font-weight:400;font-size:20px;letter-spacing:.09em;text-transform:uppercase;color:var(--charcoal)">Rossin</span>
+      </div>
+      <div style="font-family:var(--fb);font-weight:300;font-size:13px;color:var(--text-light);font-style:italic">joy is your bottom line</div>
+    </div>
+    <div style="font-family:var(--fd);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--green-text);margin-bottom:.4rem">AI &amp; Data Integration Hub</div>
+    <p style="font-size:15px;color:var(--text-light);margin-bottom:1.2rem;line-height:1.55">Connect your Fathom account to sync meeting recordings, transcripts, and auto-extract cross-meeting themes.</p>
+    <div id="connectError" class="connect-error"></div>
+    <div class="form-group">
+      <label>Fathom API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="Paste your Fathom API key..." autocomplete="off">
+      <div class="form-hint">Generate at <strong>app.fathom.video/settings &rarr; API</strong>. Your key is stored only in this browser session.</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="connectToFathom()">
+      Connect to Fathom
+    </button>
+    <div id="connectProgress" style="display:none;margin-top:1rem;font-size:.8rem;color:var(--text-light);text-align:center"></div>
+    <div style="text-align:center;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)">
+      <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.5rem">Or load from a saved file</div>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+        &#128193; Load JSON File
+        <input type="file" accept=".json" style="display:none" onchange="loadFromFile(this.files[0])">
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ LOADING OVERLAY ═══════ -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Connecting to Fathom...</div>
+</div>
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<div id="sidebar" class="sidebar hidden">
+  <div class="sidebar-brand">
+    <h1>Kaufman Rossin</h1>
+    <div class="sub">AI &amp; Data Integration Hub</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Fathom Meetings</div>
+    <button class="active" onclick="showView('meetings')" data-view="meetings">
+      <span class="icon">&#128197;</span> All Meetings <span class="badge" id="meetingCount">0</span>
+    </button>
+    <button onclick="showView('topics')" data-view="topics">
+      <span class="icon">&#128218;</span> Themes Index <span class="badge" id="topicCount">0</span>
+    </button>
+    <button onclick="showView('graph3d')" data-view="graph3d">
+      <span class="icon">&#127760;</span> Knowledge Graph
+    </button>
+    <button onclick="showView('policies')" data-view="policies">
+      <span class="icon">&#128220;</span> Firm Policies <span class="badge">2</span>
+    </button>
+
+    <div id="projectsNavSection">
+      <div class="nav-section" style="margin-top:.8rem">Projects</div>
+      <div id="projectsNavItems">
+        <button onclick="showView('topics')" style="color:var(--green);font-size:.65rem;letter-spacing:.08em">
+          <span class="icon">&#9889;</span> Unlock with AI &rarr;
+        </button>
+      </div>
+    </div>
+
+  </nav>
+  <div class="sidebar-footer">
+    <div class="api-status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <button class="btn btn-danger btn-sm" style="width:100%;justify-content:center;margin-top:.5rem" onclick="disconnect()">Disconnect</button>
+  </div>
+</div>
+
+<!-- ═══════ MAIN CONTENT ═══════ -->
+<div id="mainApp" class="main hidden">
+  <div class="topbar">
+    <h2 id="viewTitle">All Meetings</h2>
+    <div class="topbar-actions">
+      <div class="search-box">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="globalSearch" placeholder="Search meetings, themes..." oninput="handleSearch(this.value)">
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshData()">&#8635; Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Meetings View -->
+    <div id="view-meetings" class="view-panel">
+      <div class="stat-grid" id="meetingStats"></div>
+      <div id="meetingsTableContainer"></div>
+    </div>
+
+    <!-- Meeting Detail View -->
+    <div id="view-meeting-detail" class="view-panel hidden"></div>
+
+    <!-- Topics View -->
+    <div id="view-topics" class="view-panel hidden">
+      <div class="stat-grid" id="topicStats"></div>
+      <div id="topicsContainer"></div>
+    </div>
+
+    <!-- Topic Detail View -->
+    <div id="view-topic-detail" class="view-panel hidden"></div>
+
+    <!-- Firm Policies -->
+    <div id="view-policies" class="view-panel hidden">
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
+        <button class="btn btn-secondary btn-sm" onclick="showPolicy('retention')" id="pol-btn-retention" style="border-color:var(--green);color:var(--green-text)">Records Retention Policy</button>
+        <button class="btn btn-secondary btn-sm" onclick="showPolicy('wisp')" id="pol-btn-wisp">Information Security (WISP)</button>
+      </div>
+      <div class="callout" style="margin-bottom:1.5rem">These policies are automatically included as context when generating project documents (security evaluations, roadmaps, and meeting prep). Edit the source files in <code style="background:var(--gray-10);padding:1px 5px;font-size:13px">policies/</code> to update.</div>
+      <div id="policyContent" class="proj-artifact"></div>
+    </div>
+
+    <!-- 3D Knowledge Graph -->
+    <div id="view-graph3d" class="view-panel hidden">
+      <div style="width:100%;height:calc(100vh - 120px);position:relative;background:var(--charcoal)">
+        <!-- Canvas target — ForceGraph3D renders into this -->
+        <div id="graph3d-container" style="position:absolute;inset:0"></div>
+        <!-- Unlock prompt (shown when themes not loaded) -->
+        <div id="graph3d-unlock" style="position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:2rem">
+          <div style="font-size:2.5rem;opacity:.3">&#127760;</div>
+          <div style="font-family:var(--fd);font-size:16px;font-weight:800;color:white">Knowledge Graph</div>
+          <div style="font-size:15px;color:rgba(255,255,255,.4);max-width:400px;line-height:1.6">The knowledge graph visualizes how themes and people are connected across your meetings. Unlock themes first to populate it.</div>
+          <button class="btn btn-primary" onclick="showView('topics')">Unlock Themes</button>
+        </div>
+        <!-- Overlay UI — never destroyed -->
+        <div id="graph3d-overlay" style="position:absolute;inset:0;z-index:10;pointer-events:none;display:none">
+          <div id="graph3d-panel" style="position:absolute;top:12px;left:12px;bottom:12px;width:240px;display:flex;flex-direction:column;pointer-events:auto">
+            <div style="background:rgba(0,0,0,.6);padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:2px">
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Theme</span></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Person</span></div>
+            </div>
+            <div id="graph3d-directory" style="background:rgba(0,0,0,.55);flex:1;overflow-y:auto;padding:0"></div>
+          </div>
+          <div id="graph3d-info" style="position:absolute;bottom:12px;left:264px;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.3);pointer-events:none">Click a node or list item to focus. Drag to rotate. Scroll to zoom.</div>
+          <div id="graph3d-detail" style="position:absolute;top:12px;right:12px;max-width:280px;display:none;pointer-events:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Detail View (per-topic project package) -->
+    <div id="view-project" class="view-panel hidden"></div>
+
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/topics.js"></script>
+<script src="js/prep.js"></script>
+<script src="js/policies.js"></script>
+<script src="js/projects.js"></script>
+<script src="js/views.js"></script>
+<script src="js/graph.js"></script>
+</body>
+</html>
