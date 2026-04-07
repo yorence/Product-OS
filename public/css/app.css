@@ -270,6 +270,19 @@
   .cite-link:hover { background:var(--green-20); color:var(--blue); }
   .cite-link svg { width:12px; height:12px; }
 
+  /* ── Skeleton Loading ── */
+  @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  .skeleton { background:linear-gradient(90deg,var(--gray-10) 25%,var(--gray-20) 50%,var(--gray-10) 75%); background-size:800px 100%; animation:shimmer 1.5s infinite linear; border-radius:2px; }
+  .skeleton-row { display:flex; gap:1rem; padding:.7rem 1rem; border-bottom:1px solid var(--gray-10); }
+  .skeleton-cell { height:14px; border-radius:2px; }
+  .skeleton-cell-wide { flex:2; }
+  .skeleton-cell-med { flex:1; }
+  .skeleton-cell-sm { width:60px; flex-shrink:0; }
+  .loading-bar-wrap { height:3px; background:var(--gray-10); width:100%; overflow:hidden; }
+  .loading-bar { height:100%; background:var(--green); transition:width 0.4s var(--ease); }
+  .loading-status { font-family:var(--fd); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); padding:.5rem 1rem; display:flex; align-items:center; gap:.6rem; }
+  .loading-status .pulse-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1s infinite; }
+
   /* ── Mermaid Diagrams ── */
   .mermaid-container { background:white; border:1px solid var(--border); padding:1.5rem; margin:1rem 0; overflow-x:auto; box-shadow:var(--sh-sm); }
   .graph-dir-item:hover { background:rgba(255,255,255,.06) !important; }

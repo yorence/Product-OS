@@ -68,7 +68,8 @@ let STATE = {
   topicsUnlocked: false,
   projectDocs: {},
   currentView: 'meetings',
-  isDemo: false
+  isDemo: false,
+  isLoading: false
 };
 
 // Restore cached project docs

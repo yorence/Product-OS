@@ -76,17 +76,24 @@ async function fathomAPI(endpoint, params = {}) {
   return tryFetch(STATE.strategy, apiPath, STATE.apiKey);
 }
 
-async function fetchAllMeetings() {
-  let all = [], cursor = null, page = 0;
-  do {
-    showLoading(`Fetching meetings (page ${++page})...`);
-    const params = { include_transcript: 'true', include_summary: 'true', include_action_items: 'true' };
-    if (cursor) params.cursor = cursor;
-    const data = await fathomAPI('/meetings', params);
-    all = all.concat(data.items || []);
-    cursor = data.next_cursor || null;
-  } while (cursor && page < 1); // TODO: change back to 20 to load all pages
-  return all;
+// Fetch meetings page by page, calling onPage after each page arrives
+async function fetchMeetingsProgressive(onPage, onDone) {
+  let cursor = null, page = 0;
+  try {
+    do {
+      page++;
+      const params = { include_transcript: 'true', include_summary: 'true', include_action_items: 'true' };
+      if (cursor) params.cursor = cursor;
+      const data = await fathomAPI('/meetings', params);
+      const items = data.items || [];
+      STATE.meetings = STATE.meetings.concat(items);
+      cursor = data.next_cursor || null;
+      onPage(page, items.length, !!cursor);
+    } while (cursor && page < 20);
+    onDone(null);
+  } catch(e) {
+    onDone(e);
+  }
 }
 
 // ═══════ CONNECT ═══════
@@ -96,26 +103,97 @@ async function connectToFathom() {
   hideConnectError();
   STATE.apiKey = key;
   STATE.isDemo = false;
+  STATE.meetings = [];
+  STATE.topics = [];
+  STATE.topicsUnlocked = false;
 
   try {
-    // Auto-detect best connection strategy
-    showLoading('Detecting connection method...');
+    // Quick strategy detection (stays on connect screen briefly)
+    setProgress('Detecting connection...');
     STATE.strategy = await detectStrategy(key);
-
-    // Fetch all meetings with pagination
-    STATE.meetings = await fetchAllMeetings();
-    STATE.topics = []; // Topics are synthesized on-demand via Perplexity
-    STATE.topicsUnlocked = false;
-
-    // Save to localStorage for faster reload
-    try { localStorage.setItem('fathom_cache', JSON.stringify({ ts: Date.now(), meetings: STATE.meetings })); } catch(e) {}
-
-    hideLoading();
-    enterApp();
-  } catch (e) {
-    hideLoading();
-    showConnectError(e.message);
+  } catch(e) {
+    showConnectError('Connection failed: ' + e.message);
+    return;
   }
+
+  // Enter the app immediately with skeleton UI
+  enterApp();
+  STATE.isLoading = true;
+  renderMeetingsSkeleton();
+
+  // Fetch pages in background, updating UI progressively
+  fetchMeetingsProgressive(
+    (page, count, hasMore) => {
+      // Update UI after each page
+      document.getElementById('meetingCount').textContent = STATE.meetings.length;
+      updateLoadingStatus(page, STATE.meetings.length, hasMore);
+      // Re-render the table with what we have so far
+      if (STATE.currentView === 'meetings') renderMeetings();
+    },
+    (err) => {
+      STATE.isLoading = false;
+      if (err) {
+        console.error('Fetch error on later page:', err);
+        // Still show what we got
+      }
+      hideLoadingStatus();
+      document.getElementById('meetingCount').textContent = STATE.meetings.length;
+      if (STATE.currentView === 'meetings') renderMeetings();
+      // Cache
+      try { localStorage.setItem('fathom_cache', JSON.stringify({ ts: Date.now(), meetings: STATE.meetings })); } catch(e) {}
+    }
+  );
+}
+
+function renderMeetingsSkeleton() {
+  const container = document.getElementById('meetingsTableContainer');
+  const stats = document.getElementById('meetingStats');
+  // Skeleton stat cards
+  stats.innerHTML = `
+    <div class="stat-card"><div class="skeleton" style="width:80px;height:12px;margin-bottom:6px"></div><div class="skeleton" style="width:40px;height:24px"></div></div>
+    <div class="stat-card"><div class="skeleton" style="width:80px;height:12px;margin-bottom:6px"></div><div class="skeleton" style="width:60px;height:24px"></div></div>
+    <div class="stat-card"><div class="skeleton" style="width:80px;height:12px;margin-bottom:6px"></div><div class="skeleton" style="width:40px;height:24px"></div></div>
+    <div class="stat-card" style="border-left-color:var(--green);background:linear-gradient(135deg,var(--green-10),white)"><div class="skeleton" style="width:100px;height:12px;margin-bottom:6px"></div><div class="skeleton" style="width:90px;height:16px"></div></div>
+  `;
+  // Skeleton table
+  let rows = '';
+  for (let i = 0; i < 8; i++) {
+    rows += `<div class="skeleton-row">
+      <div class="skeleton skeleton-cell skeleton-cell-wide"></div>
+      <div class="skeleton skeleton-cell skeleton-cell-med"></div>
+      <div class="skeleton skeleton-cell skeleton-cell-sm"></div>
+      <div class="skeleton skeleton-cell skeleton-cell-sm"></div>
+      <div class="skeleton skeleton-cell skeleton-cell-med"></div>
+    </div>`;
+  }
+  container.innerHTML = `
+    <div id="loadingStatusBar"></div>
+    <div style="background:white;border:1px solid var(--border)">
+      <div style="display:flex;gap:1rem;padding:.65rem 1rem;background:var(--blue)">
+        <div style="flex:2;height:12px;background:rgba(255,255,255,.15);border-radius:2px"></div>
+        <div style="flex:1;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
+        <div style="width:60px;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
+        <div style="width:60px;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
+        <div style="flex:1;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
+      </div>
+      ${rows}
+    </div>
+  `;
+}
+
+function updateLoadingStatus(page, totalLoaded, hasMore) {
+  const bar = document.getElementById('loadingStatusBar');
+  if (!bar) return;
+  const pct = hasMore ? Math.min(page * 5, 95) : 100;
+  bar.innerHTML = `
+    <div class="loading-bar-wrap"><div class="loading-bar" style="width:${pct}%"></div></div>
+    <div class="loading-status"><span class="pulse-dot"></span> Loading meetings... ${totalLoaded} loaded (page ${page})${hasMore ? '' : ' — done'}</div>
+  `;
+}
+
+function hideLoadingStatus() {
+  const bar = document.getElementById('loadingStatusBar');
+  if (bar) bar.innerHTML = '';
 }
 
 function loadFromFile(file) {
@@ -172,27 +250,37 @@ function enterApp() {
   document.getElementById('connectScreen').classList.add('hidden');
   document.getElementById('sidebar').classList.remove('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
-  document.getElementById('meetingCount').textContent = STATE.meetings.length;
-  document.getElementById('topicCount').textContent = STATE.topics.length;
+  document.getElementById('meetingCount').textContent = STATE.meetings.length || '...';
+  document.getElementById('topicCount').textContent = STATE.topics.length || '?';
   const dot = document.getElementById('statusDot');
   const txt = document.getElementById('statusText');
   const stratLabels = { local:'Local Server', corsproxy:'corsproxy.io', allorigins:'allorigins.win', direct:'Direct', file:'File' };
-  dot.className = 'dot ' + (STATE.isDemo ? 'dot-yellow' : 'dot-green');
-  txt.textContent = STATE.isDemo ? 'Demo Mode' : ('Connected' + (STATE.strategy ? ' via ' + (stratLabels[STATE.strategy]||STATE.strategy) : ''));
+  dot.className = 'dot ' + (STATE.isDemo ? 'dot-yellow' : STATE.isLoading ? 'dot-yellow' : 'dot-green');
+  txt.textContent = STATE.isDemo ? 'Demo Mode' : STATE.isLoading ? 'Loading...' : ('Connected' + (STATE.strategy ? ' via ' + (stratLabels[STATE.strategy]||STATE.strategy) : ''));
   showView('meetings');
 }
 
 async function refreshData() {
   if (STATE.isDemo) return;
-  try {
-    showLoading('Refreshing...');
-    STATE.meetings = await fetchAllMeetings();
-    STATE.topics = [];
-    STATE.topicsUnlocked = false;
-    try { sessionStorage.removeItem('llm_topics'); } catch(e) {}
-    hideLoading();
-    document.getElementById('meetingCount').textContent = STATE.meetings.length;
-    document.getElementById('topicCount').textContent = '?';
-    showView(STATE.currentView);
-  } catch(e) { hideLoading(); alert('Refresh failed: ' + e.message); }
+  STATE.meetings = [];
+  STATE.topics = [];
+  STATE.topicsUnlocked = false;
+  STATE.isLoading = true;
+  try { sessionStorage.removeItem('llm_topics'); } catch(e) {}
+  renderMeetingsSkeleton();
+  fetchMeetingsProgressive(
+    (page, count, hasMore) => {
+      document.getElementById('meetingCount').textContent = STATE.meetings.length;
+      updateLoadingStatus(page, STATE.meetings.length, hasMore);
+      if (STATE.currentView === 'meetings') renderMeetings();
+    },
+    (err) => {
+      STATE.isLoading = false;
+      hideLoadingStatus();
+      document.getElementById('meetingCount').textContent = STATE.meetings.length;
+      document.getElementById('topicCount').textContent = '?';
+      if (STATE.currentView === 'meetings') renderMeetings();
+      try { localStorage.setItem('fathom_cache', JSON.stringify({ ts: Date.now(), meetings: STATE.meetings })); } catch(e) {}
+    }
+  );
 }
