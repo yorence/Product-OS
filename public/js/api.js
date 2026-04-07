@@ -120,15 +120,16 @@ async function backfillMeetingDetails(onProgress) {
 
     results.forEach((result, idx) => {
       const meeting = batch[idx];
-      if (result.status === 'fulfilled' && result.value) {
+      const target = STATE.meetings.find(m => m.recording_id === meeting.recording_id);
+      if (result.status === 'fulfilled' && result.value && target) {
         const detail = result.value;
-        const target = STATE.meetings.find(m => m.recording_id === meeting.recording_id);
-        if (target) {
-          if (detail.transcript) target.transcript = detail.transcript;
-          if (detail.default_summary) target.default_summary = detail.default_summary;
-          if (detail.action_items) target.action_items = detail.action_items;
-          target._detailLoaded = true;
-        }
+        if (detail.transcript) target.transcript = detail.transcript;
+        if (detail.default_summary) target.default_summary = detail.default_summary;
+        if (detail.action_items) target.action_items = detail.action_items;
+        target._detailLoaded = true;
+      } else if (target) {
+        // Mark as loaded even on failure so we don't retry endlessly
+        target._detailLoaded = true;
       }
     });
 
@@ -159,6 +160,9 @@ async function backfillViaPagination(onProgress) {
     const filled = STATE.meetings.filter(m => m._detailLoaded).length;
     if (onProgress) onProgress(filled, STATE.meetings.length);
   } while (cursor && page < 50);
+
+  // Mark any remaining meetings as loaded (API didn't return them — possibly no transcript)
+  STATE.meetings.forEach(m => { m._detailLoaded = true; });
 }
 
 // Fetch meetings page by page (metadata only — fast), then backfill details in parallel

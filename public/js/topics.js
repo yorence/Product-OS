@@ -322,12 +322,27 @@ Every index (0-${enrichedThemes.length - 1}) must appear in exactly one group.`;
 // ══════════════════════════════════════════════════════════════
 
 async function synthesizeTopicsWithLLM(perplexityKey, statusFn) {
-  const microBatches = buildMicroBatches(STATE.meetings);
+  // Only include meetings that have actual content (summary or transcript)
+  const analyzable = STATE.meetings.filter(m => {
+    const hasSummary = m.default_summary?.markdown_formatted?.length > 0;
+    const hasTranscript = m.transcript?.length > 0;
+    return hasSummary || hasTranscript;
+  });
+  const skipped = STATE.meetings.length - analyzable.length;
+  if (skipped > 0) {
+    console.warn(`Skipping ${skipped} meetings with no summary or transcript`);
+  }
+
+  if (!analyzable.length) {
+    throw new Error(`None of the ${STATE.meetings.length} meetings have transcripts or summaries loaded. Try refreshing.`);
+  }
+
+  const microBatches = buildMicroBatches(analyzable);
   const total = microBatches.length;
   const MAX_CONCURRENT = 3;
 
   // ── MAP (throttled parallel) ──
-  if (statusFn) statusFn(`Extracting themes: 0/${total} batches (${STATE.meetings.length} meetings)...`);
+  if (statusFn) statusFn(`Extracting themes: 0/${total} batches (${analyzable.length} of ${STATE.meetings.length} meetings${skipped ? `, ${skipped} skipped — no transcript` : ''})...`);
 
   let done = 0;
   const tasks = microBatches.map((batch, i) => () =>
