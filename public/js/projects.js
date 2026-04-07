@@ -123,14 +123,22 @@ async function generateProjectDocs(topicId) {
   if (!STATE.perplexityKey) { alert('Perplexity API key not set. Go to Topics Index to enter it.'); return; }
 
   // Gather transcript context with Fathom share URLs for citation
-  const meetingContext = t.segments.map(s => {
+  // Limit to top 15 most relevant segments to keep within token limits
+  const topSegments = t.segments
+    .slice()
+    .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+    .slice(0, 15);
+  // Re-sort by meeting date for readability
+  topSegments.sort((a, b) => (a.meetingDate || '').localeCompare(b.meetingDate || ''));
+
+  const meetingContext = topSegments.map(s => {
     const m = STATE.meetings.find(x => x.recording_id === s.meetingId);
     const shareUrl = m?.share_url || '';
-    // Convert timestamp HH:MM:SS to seconds for Fathom deep link
     const tsParts = (s.startTime||'0:0:0').split(':').map(Number);
     const tsSec = (tsParts[0]||0)*3600 + (tsParts[1]||0)*60 + (tsParts[2]||0);
     const citeUrl = shareUrl ? shareUrl + '?timestamp=' + tsSec : '';
-    return `[Meeting: "${s.meetingTitle}" | ${s.startTime}–${s.endTime} | Video: ${citeUrl}]\n${s.lines ? s.lines.map(l => (l.speaker?.display_name||'') + ': ' + l.text).join('\n') : s.text}`;
+    const lines = s.lines ? s.lines.map(l => (l.speaker?.display_name||'') + ': ' + l.text).join('\n') : s.text;
+    return `[Meeting: "${s.meetingTitle}" | ${s.startTime}–${s.endTime} | Video: ${citeUrl}]\n${lines.substring(0, 600)}`;
   }).join('\n\n---\n\n');
 
   // Also gather brief context from OTHER themes so the prep notes are holistic
@@ -138,13 +146,16 @@ async function generateProjectDocs(topicId) {
     `- "${x.name}": ${x.description || 'No description'}`
   ).join('\n');
 
-  // Gather action items and summaries from all meetings for broader context
-  const allMeetingSummaries = STATE.meetings.map(m => {
-    const title = m.title || m.meeting_title || 'Untitled';
-    const date = new Date(m.recording_start_time || m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    const summary = m.default_summary?.markdown_formatted || '';
-    return summary ? `[${title} — ${date}]\n${summary.substring(0, 400)}` : '';
-  }).filter(Boolean).join('\n\n');
+  // Gather action items and summaries from related meetings only (not all)
+  const relatedMeetingIds = new Set(t.segments.map(s => s.meetingId));
+  const allMeetingSummaries = STATE.meetings
+    .filter(m => relatedMeetingIds.has(m.recording_id))
+    .map(m => {
+      const title = m.title || m.meeting_title || 'Untitled';
+      const date = new Date(m.recording_start_time || m.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const summary = m.default_summary?.markdown_formatted || '';
+      return summary ? `[${title} — ${date}]\n${summary.substring(0, 300)}` : '';
+    }).filter(Boolean).join('\n\n');
 
   const prompt = `You are a product manager at Kaufman Rossin, a professional services firm. Based on the following meeting transcript excerpts about the initiative "${t.name}", generate 6 project artifacts.
 
@@ -156,10 +167,10 @@ OTHER ACTIVE INITIATIVES (for context — these are the other themes being worke
 ${otherThemes}
 
 FIRM POLICIES (security evaluations, roadmaps, and meeting prep MUST account for these):
-${getPoliciesContext().substring(0, 3000)}
+${getPoliciesContext().substring(0, 1500)}
 
-BROADER MEETING CONTEXT (summaries from all recent meetings):
-${allMeetingSummaries.substring(0, 3000)}
+BROADER MEETING CONTEXT (summaries from related meetings):
+${allMeetingSummaries.substring(0, 2000)}
 
 TRANSCRIPT EXCERPTS FOR THIS INITIATIVE:
 ${meetingContext}

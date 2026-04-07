@@ -43,9 +43,7 @@ async function tryFetch(strategy, apiPath, apiKey) {
     const res = await fetch(fetchUrl, opts);
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!data.items) throw new Error('Invalid response format');
-    return data;
+    return await res.json();
   } catch(e) {
     clearTimeout(timeout);
     throw e;
@@ -61,7 +59,8 @@ async function detectStrategy(apiKey) {
   for (const s of strategies) {
     setProgress(`Trying ${labels[s]}...`);
     try {
-      await tryFetch(s, testPath, apiKey);
+      const data = await tryFetch(s, testPath, apiKey);
+      if (!data.items) throw new Error('Invalid response format');
       setProgress(`Connected via ${labels[s]}`);
       return s;
     } catch(e) {
@@ -76,20 +75,114 @@ async function fathomAPI(endpoint, params = {}) {
   return tryFetch(STATE.strategy, apiPath, STATE.apiKey);
 }
 
-// Fetch meetings page by page, calling onPage after each page arrives
+// Fetch a single meeting's full details (transcript, summary, action items)
+async function fetchMeetingDetail(meetingId) {
+  const apiPath = buildFathomUrl(`/meetings/${meetingId}`, {
+    include_transcript: 'true',
+    include_summary: 'true',
+    include_action_items: 'true'
+  });
+  return tryFetch(STATE.strategy, apiPath, STATE.apiKey);
+}
+
+// Backfill transcripts/summaries for meetings in parallel batches
+async function backfillMeetingDetails(onProgress) {
+  const BATCH_SIZE = 5; // concurrent requests
+  const toFill = STATE.meetings.filter(m => !m._detailLoaded);
+  if (!toFill.length) return;
+
+  // Test if individual meeting endpoint works
+  try {
+    const test = await fetchMeetingDetail(toFill[0].recording_id);
+    const target = STATE.meetings.find(m => m.recording_id === toFill[0].recording_id);
+    if (target && test) {
+      if (test.transcript) target.transcript = test.transcript;
+      if (test.default_summary) target.default_summary = test.default_summary;
+      if (test.action_items) target.action_items = test.action_items;
+      target._detailLoaded = true;
+    }
+  } catch(e) {
+    // Individual endpoint not available — fall back to paginated fetch with details
+    console.warn('Individual meeting endpoint not available, falling back to paginated detail fetch');
+    await backfillViaPagination(onProgress);
+    return;
+  }
+
+  let done = 1;
+  if (onProgress) onProgress(done, toFill.length);
+
+  const remaining = toFill.slice(1);
+  for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
+    const batch = remaining.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(m => fetchMeetingDetail(m.recording_id))
+    );
+
+    results.forEach((result, idx) => {
+      const meeting = batch[idx];
+      if (result.status === 'fulfilled' && result.value) {
+        const detail = result.value;
+        const target = STATE.meetings.find(m => m.recording_id === meeting.recording_id);
+        if (target) {
+          if (detail.transcript) target.transcript = detail.transcript;
+          if (detail.default_summary) target.default_summary = detail.default_summary;
+          if (detail.action_items) target.action_items = detail.action_items;
+          target._detailLoaded = true;
+        }
+      }
+    });
+
+    done += batch.length;
+    if (onProgress) onProgress(done, toFill.length);
+  }
+}
+
+// Fallback: re-fetch all meetings with details via pagination (original approach)
+async function backfillViaPagination(onProgress) {
+  let cursor = null, page = 0;
+  const meetingMap = new Map(STATE.meetings.map(m => [m.recording_id, m]));
+  do {
+    page++;
+    const params = { include_transcript: 'true', include_summary: 'true', include_action_items: 'true' };
+    if (cursor) params.cursor = cursor;
+    const data = await fathomAPI('/meetings', params);
+    (data.items || []).forEach(item => {
+      const target = meetingMap.get(item.recording_id);
+      if (target) {
+        if (item.transcript) target.transcript = item.transcript;
+        if (item.default_summary) target.default_summary = item.default_summary;
+        if (item.action_items) target.action_items = item.action_items;
+        target._detailLoaded = true;
+      }
+    });
+    cursor = data.next_cursor || null;
+    const filled = STATE.meetings.filter(m => m._detailLoaded).length;
+    if (onProgress) onProgress(filled, STATE.meetings.length);
+  } while (cursor && page < 50);
+}
+
+// Fetch meetings page by page (metadata only — fast), then backfill details in parallel
 async function fetchMeetingsProgressive(onPage, onDone) {
   let cursor = null, page = 0;
   try {
+    // Phase 1: Fetch meeting list quickly (no transcripts)
     do {
       page++;
-      const params = { include_transcript: 'true', include_summary: 'true', include_action_items: 'true' };
+      const params = {};
       if (cursor) params.cursor = cursor;
       const data = await fathomAPI('/meetings', params);
-      const items = data.items || [];
+      const items = (data.items || []).map(m => ({ ...m, _detailLoaded: false }));
       STATE.meetings = STATE.meetings.concat(items);
       cursor = data.next_cursor || null;
-      onPage(page, items.length, !!cursor);
-    } while (cursor && page < 20);
+      onPage(page, items.length, !!cursor, 'list');
+    } while (cursor && page < 50);
+
+    // Phase 2: Backfill transcripts/summaries in parallel
+    onPage(page, 0, true, 'details');
+    await backfillMeetingDetails((done, total) => {
+      onPage(page, done, done < total, 'details');
+    });
+
     onDone(null);
   } catch(e) {
     onDone(e);
@@ -107,6 +200,9 @@ async function connectToFathom() {
   STATE.topics = [];
   STATE.topicsUnlocked = false;
 
+  // Clear stale cache
+  try { localStorage.removeItem('fathom_cache'); } catch(e) {}
+
   try {
     // Quick strategy detection (stays on connect screen briefly)
     setProgress('Detecting connection...');
@@ -116,29 +212,33 @@ async function connectToFathom() {
     return;
   }
 
-  // Enter the app immediately with skeleton UI
-  enterApp();
+  // Enter the app immediately — renderMeetings() will show skeleton since isLoading=true
   STATE.isLoading = true;
-  renderMeetingsSkeleton();
+  enterApp();
 
   // Fetch pages in background, updating UI progressively
   fetchMeetingsProgressive(
-    (page, count, hasMore) => {
-      // Update UI after each page
+    (page, count, hasMore, phase) => {
       document.getElementById('meetingCount').textContent = STATE.meetings.length;
-      updateLoadingStatus(page, STATE.meetings.length, hasMore);
-      // Re-render the table with what we have so far
-      if (STATE.currentView === 'meetings') renderMeetings();
+      updateLoadingStatus(page, count, hasMore, phase);
+      // Re-render current view as data arrives
+      if (phase === 'list' && STATE.currentView === 'meetings') renderMeetings();
+      if (STATE.currentView === 'topics' && !STATE.topicsUnlocked) renderTopics();
     },
     (err) => {
       STATE.isLoading = false;
       if (err) {
         console.error('Fetch error on later page:', err);
-        // Still show what we got
       }
       hideLoadingStatus();
       document.getElementById('meetingCount').textContent = STATE.meetings.length;
       if (STATE.currentView === 'meetings') renderMeetings();
+      if (STATE.currentView === 'topics' && !STATE.topicsUnlocked) renderTopics();
+      // Update status dot
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if (dot) dot.className = 'dot dot-green';
+      if (txt) txt.textContent = 'Connected' + (STATE.strategy ? ' via ' + ({ local:'Local Server', corsproxy:'corsproxy.io', allorigins:'allorigins.win', direct:'Direct', file:'File' }[STATE.strategy]||STATE.strategy) : '');
       // Cache
       try { localStorage.setItem('fathom_cache', JSON.stringify({ ts: Date.now(), meetings: STATE.meetings })); } catch(e) {}
     }
@@ -170,25 +270,34 @@ function renderMeetingsSkeleton() {
     <div id="loadingStatusBar"></div>
     <div style="background:white;border:1px solid var(--border)">
       <div style="display:flex;gap:1rem;padding:.65rem 1rem;background:var(--blue)">
-        <div style="flex:2;height:12px;background:rgba(255,255,255,.15);border-radius:2px"></div>
-        <div style="flex:1;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
-        <div style="width:60px;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
-        <div style="width:60px;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
-        <div style="flex:1;height:12px;background:rgba(255,255,255,.1);border-radius:2px"></div>
+        <div style="flex:2;height:12px;background:rgba(255,255,255,.15);"></div>
+        <div style="flex:1;height:12px;background:rgba(255,255,255,.1);"></div>
+        <div style="width:60px;height:12px;background:rgba(255,255,255,.1);"></div>
+        <div style="width:60px;height:12px;background:rgba(255,255,255,.1);"></div>
+        <div style="flex:1;height:12px;background:rgba(255,255,255,.1);"></div>
       </div>
       ${rows}
     </div>
   `;
 }
 
-function updateLoadingStatus(page, totalLoaded, hasMore) {
+function updateLoadingStatus(page, count, hasMore, phase) {
   const bar = document.getElementById('loadingStatusBar');
   if (!bar) return;
-  const pct = hasMore ? Math.min(page * 5, 95) : 100;
-  bar.innerHTML = `
-    <div class="loading-bar-wrap"><div class="loading-bar" style="width:${pct}%"></div></div>
-    <div class="loading-status"><span class="pulse-dot"></span> Loading meetings... ${totalLoaded} loaded (page ${page})${hasMore ? '' : ' — done'}</div>
-  `;
+  if (phase === 'details') {
+    const total = STATE.meetings.length;
+    const pct = total > 0 ? Math.min(Math.round((count / total) * 100), 100) : 0;
+    bar.innerHTML = `
+      <div class="loading-bar-wrap"><div class="loading-bar" style="width:${pct}%"></div></div>
+      <div class="loading-status"><span class="pulse-dot"></span> Loading transcripts & summaries... ${count}/${total} meetings${hasMore ? '' : ' — done'}</div>
+    `;
+  } else {
+    const pct = hasMore ? Math.min(page * 5, 50) : 50;
+    bar.innerHTML = `
+      <div class="loading-bar-wrap"><div class="loading-bar" style="width:${pct}%"></div></div>
+      <div class="loading-status"><span class="pulse-dot"></span> Loading meeting list... ${STATE.meetings.length} found (page ${page})${hasMore ? '' : ''}</div>
+    `;
+  }
 }
 
 function hideLoadingStatus() {
@@ -239,8 +348,8 @@ function loadDemoData() {
 }
 
 function disconnect() {
-  STATE = { apiKey:'', perplexityKey:'', strategy:'', meetings:[], topics:[], topicsUnlocked:false, currentView:'meetings', isDemo:false };
-  try { localStorage.removeItem('fathom_cache'); sessionStorage.removeItem('llm_topics'); } catch(e) {}
+  STATE = { apiKey:'', perplexityKey:'', strategy:'', meetings:[], topics:[], topicsUnlocked:false, projectDocs:{}, currentView:'meetings', isDemo:false, isLoading:false, meetingSort:{col:'date',dir:'desc'} };
+  try { localStorage.removeItem('fathom_cache'); sessionStorage.removeItem('llm_topics'); sessionStorage.removeItem('project_docs'); } catch(e) {}
   document.getElementById('sidebar').classList.add('hidden');
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('connectScreen').classList.remove('hidden');
@@ -269,10 +378,11 @@ async function refreshData() {
   try { sessionStorage.removeItem('llm_topics'); } catch(e) {}
   renderMeetingsSkeleton();
   fetchMeetingsProgressive(
-    (page, count, hasMore) => {
+    (page, count, hasMore, phase) => {
       document.getElementById('meetingCount').textContent = STATE.meetings.length;
-      updateLoadingStatus(page, STATE.meetings.length, hasMore);
-      if (STATE.currentView === 'meetings') renderMeetings();
+      updateLoadingStatus(page, count, hasMore, phase);
+      if (phase === 'list' && STATE.currentView === 'meetings') renderMeetings();
+      if (STATE.currentView === 'topics' && !STATE.topicsUnlocked) renderTopics();
     },
     (err) => {
       STATE.isLoading = false;
@@ -280,6 +390,7 @@ async function refreshData() {
       document.getElementById('meetingCount').textContent = STATE.meetings.length;
       document.getElementById('topicCount').textContent = '?';
       if (STATE.currentView === 'meetings') renderMeetings();
+      if (STATE.currentView === 'topics' && !STATE.topicsUnlocked) renderTopics();
       try { localStorage.setItem('fathom_cache', JSON.stringify({ ts: Date.now(), meetings: STATE.meetings })); } catch(e) {}
     }
   );

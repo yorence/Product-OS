@@ -69,7 +69,8 @@ let STATE = {
   projectDocs: {},
   currentView: 'meetings',
   isDemo: false,
-  isLoading: false
+  isLoading: false,
+  meetingSort: { col: 'date', dir: 'desc' }
 };
 
 // Restore cached project docs

@@ -30,6 +30,11 @@ function showView(view) {
 }
 
 function renderMeetings() {
+  // Show skeleton if still in initial load with no meetings yet
+  if (STATE.isLoading && !STATE.meetings.length) {
+    renderMeetingsSkeleton();
+    return;
+  }
   const stats = document.getElementById('meetingStats');
   const totalDur = STATE.meetings.reduce((sum, m) => {
     const s = new Date(m.recording_start_time), e = new Date(m.recording_end_time);
@@ -55,8 +60,41 @@ function renderMeetings() {
     return;
   }
 
-  const sorted = [...STATE.meetings].sort((a,b) => new Date(b.recording_start_time||b.created_at) - new Date(a.recording_start_time||a.created_at));
-  let html = '<table class="data-table"><thead><tr><th>Title</th><th>Date</th><th>Time</th><th>Duration</th><th>Participants</th><th>Topics</th></tr></thead><tbody>';
+  // Sort meetings
+  const sort = STATE.meetingSort || { col: 'date', dir: 'desc' };
+  const sorted = [...STATE.meetings].sort((a, b) => {
+    let va, vb;
+    const startA = new Date(a.recording_start_time || a.created_at);
+    const startB = new Date(b.recording_start_time || b.created_at);
+    switch (sort.col) {
+      case 'title':
+        va = (a.title || a.meeting_title || '').toLowerCase();
+        vb = (b.title || b.meeting_title || '').toLowerCase();
+        return sort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      case 'date':
+        return sort.dir === 'asc' ? startA - startB : startB - startA;
+      case 'duration':
+        va = new Date(a.recording_end_time || a.created_at) - startA;
+        vb = new Date(b.recording_end_time || b.created_at) - startB;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      case 'participants':
+        va = (a.calendar_invitees || []).length;
+        vb = (b.calendar_invitees || []).length;
+        return sort.dir === 'asc' ? va - vb : vb - va;
+      default:
+        return startB - startA;
+    }
+  });
+
+  const arrow = (col) => sort.col === col ? (sort.dir === 'asc' ? ' &#9650;' : ' &#9660;') : '';
+  let html = `<table class="data-table"><thead><tr>
+    <th class="sortable" onclick="sortMeetings('title')">Title${arrow('title')}</th>
+    <th class="sortable" onclick="sortMeetings('date')">Date${arrow('date')}</th>
+    <th>Time</th>
+    <th class="sortable" onclick="sortMeetings('duration')">Duration${arrow('duration')}</th>
+    <th class="sortable" onclick="sortMeetings('participants')">Participants${arrow('participants')}</th>
+    <th>Topics</th>
+  </tr></thead><tbody>`;
   sorted.forEach(m => {
     const start = new Date(m.recording_start_time || m.created_at);
     const end = new Date(m.recording_end_time || m.created_at);
@@ -145,18 +183,50 @@ function renderTopics() {
   // Show unlock screen — but block if meetings are still loading
   stats.innerHTML = '';
   const stillLoading = STATE.isLoading;
-  container.innerHTML = `
-    <div style="text-align:center;padding:4rem 2rem;max-width:480px;margin:0 auto">
-      <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.3">&#128218;</div>
-      <h3 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin-bottom:.5rem">Cross-Meeting Theme Analysis</h3>
-      ${stillLoading ? `
-        <div style="padding:16px;background:#fff8ec;border-left:3px solid #f39c12;text-align:left;margin-bottom:1.5rem">
-          <div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b45309;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span class="pulse-dot" style="width:8px;height:8px;border-radius:50%;background:#f39c12;animation:pulse 1s infinite"></span> Meetings still loading</div>
-          <div style="font-size:14px;color:var(--text-light);line-height:1.5">${STATE.meetings.length} meetings loaded so far. Please wait for all meetings to finish loading before analyzing themes — this ensures no discussions are missed.</div>
+
+  if (stillLoading) {
+    // Calculate progress
+    const loaded = STATE.meetings.length;
+    const withTranscripts = STATE.meetings.filter(m => m._detailLoaded).length;
+    const phase = withTranscripts > 0 ? 'details' : 'list';
+    const pct = phase === 'details' && loaded > 0
+      ? Math.round((withTranscripts / loaded) * 100)
+      : Math.min(loaded * 2, 50); // estimate during list phase
+
+    container.innerHTML = `
+      <div style="text-align:center;padding:4rem 2rem;max-width:480px;margin:0 auto">
+        <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.3">&#128218;</div>
+        <h3 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin-bottom:.5rem">Cross-Meeting Theme Analysis</h3>
+        <div style="padding:20px;background:#fff8ec;border-left:3px solid #f39c12;text-align:left;margin-bottom:1.5rem">
+          <div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b45309;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+            <span class="pulse-dot" style="width:8px;height:8px;border-radius:50%;background:#f39c12;animation:pulse 1s infinite"></span>
+            Loading meetings before theme analysis
+          </div>
+          <div style="background:var(--gray-20);height:8px;overflow:hidden;margin-bottom:10px">
+            <div style="height:100%;background:#f39c12;transition:width .3s;width:${pct}%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--charcoal);margin-bottom:6px">
+            <span><strong>${loaded}</strong> meetings found</span>
+            <span><strong>${withTranscripts}</strong>/${loaded} transcripts loaded</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-light);line-height:1.5">
+            ${phase === 'list'
+              ? 'Fetching meeting list...'
+              : withTranscripts < loaded
+                ? 'Loading transcripts & summaries — almost there...'
+                : 'Finalizing...'}
+          </div>
         </div>
-      ` : `
+        <div style="opacity:.4;font-size:14px;color:var(--text-light)">The API key input will appear once all data is loaded.</div>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div style="text-align:center;padding:4rem 2rem;max-width:480px;margin:0 auto">
+        <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.3">&#128218;</div>
+        <h3 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin-bottom:.5rem">Cross-Meeting Theme Analysis</h3>
         <p style="font-size:15px;color:var(--text-light);line-height:1.6;margin-bottom:1.5rem">
-          Synthesize themes across your ${STATE.meetings.length} meetings using AI.
+          Synthesize themes across your <strong>${STATE.meetings.length}</strong> meetings using AI.
           Each theme becomes a project with auto-generated briefs, roadmaps, and diagrams.
         </p>
         <div style="margin-bottom:1rem;text-align:left">
@@ -167,9 +237,9 @@ function renderTopics() {
         <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="unlockTopics()">
           Unlock Theme Analysis
         </button>
-      `}
-    </div>
-  `;
+      </div>
+    `;
+  }
 }
 
 function renderTopicsGrid() {
@@ -244,6 +314,19 @@ function renderTopicsGrid() {
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+// Sort meetings table by column
+function sortMeetings(col) {
+  const sort = STATE.meetingSort || { col: 'date', dir: 'desc' };
+  if (sort.col === col) {
+    sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sort.col = col;
+    sort.dir = col === 'title' ? 'asc' : 'desc';
+  }
+  STATE.meetingSort = sort;
+  renderMeetings();
 }
 
 // showTopicDetail removed — theme cards now navigate directly to project pages

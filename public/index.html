@@ -69,7 +69,7 @@
       <span class="icon">&#127760;</span> Knowledge Graph
     </button>
     <button onclick="showView('policies')" data-view="policies">
-      <span class="icon">&#128220;</span> Firm Policies <span class="badge">2</span>
+      <span class="icon">&#128220;</span> Firm Policies <span class="badge">3</span>
     </button>
 
     <div id="projectsNavSection">
@@ -127,8 +127,9 @@
       <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
         <button class="btn btn-secondary btn-sm" onclick="showPolicy('retention')" id="pol-btn-retention" style="border-color:var(--green);color:var(--green-text)">Records Retention Policy</button>
         <button class="btn btn-secondary btn-sm" onclick="showPolicy('wisp')" id="pol-btn-wisp">Information Security (WISP)</button>
+        <button class="btn btn-secondary btn-sm" onclick="showPolicy('joy')" id="pol-btn-joy">JOY Design System</button>
       </div>
-      <div class="callout" style="margin-bottom:1.5rem">These policies are automatically included as context when generating project documents (security evaluations, roadmaps, and meeting prep). Edit the source files in <code style="background:var(--gray-10);padding:1px 5px;font-size:13px">policies/</code> to update.</div>
+      <div class="callout" style="margin-bottom:1.5rem">These policies and guidelines are automatically included as context when generating project documents (security evaluations, roadmaps, meeting prep, and UI specifications). The JOY Design System ensures all outputs align with Kaufman Rossin's brand standards.</div>
       <div id="policyContent" class="proj-artifact"></div>
     </div>
 
