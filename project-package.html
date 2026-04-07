@@ -485,19 +485,28 @@
 
     <!-- 3D Knowledge Graph -->
     <div id="view-graph3d" class="view-panel hidden">
-      <div id="graph3d-container" style="width:100%;height:calc(100vh - 120px);background:var(--charcoal);position:relative">
-        <div id="graph3d-panel" style="position:absolute;top:12px;left:12px;bottom:12px;z-index:10;width:240px;display:flex;flex-direction:column;pointer-events:auto">
-          <!-- Legend -->
-          <div style="background:rgba(0,0,0,.6);padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:2px">
-            <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Theme</span></div>
-            <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Person</span></div>
-          </div>
-          <!-- Directory -->
-          <div id="graph3d-directory" style="background:rgba(0,0,0,.55);flex:1;overflow-y:auto;padding:0">
-          </div>
+      <div style="width:100%;height:calc(100vh - 120px);position:relative;background:var(--charcoal)">
+        <!-- Canvas target — ForceGraph3D renders into this -->
+        <div id="graph3d-container" style="position:absolute;inset:0"></div>
+        <!-- Unlock prompt (shown when themes not loaded) -->
+        <div id="graph3d-unlock" style="position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:2rem">
+          <div style="font-size:2.5rem;opacity:.3">&#127760;</div>
+          <div style="font-family:var(--fd);font-size:16px;font-weight:800;color:white">Knowledge Graph</div>
+          <div style="font-size:15px;color:rgba(255,255,255,.4);max-width:400px;line-height:1.6">The knowledge graph visualizes how themes and people are connected across your meetings. Unlock themes first to populate it.</div>
+          <button class="btn btn-primary" onclick="showView('topics')">Unlock Themes</button>
         </div>
-        <div id="graph3d-info" style="position:absolute;bottom:12px;left:264px;z-index:10;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.3)">Click a node or list item to focus. Drag to rotate. Scroll to zoom.</div>
-        <div id="graph3d-detail" style="position:absolute;top:12px;right:12px;z-index:10;max-width:280px;display:none"></div>
+        <!-- Overlay UI — never destroyed -->
+        <div id="graph3d-overlay" style="position:absolute;inset:0;z-index:10;pointer-events:none;display:none">
+          <div id="graph3d-panel" style="position:absolute;top:12px;left:12px;bottom:12px;width:240px;display:flex;flex-direction:column;pointer-events:auto">
+            <div style="background:rgba(0,0,0,.6);padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:2px">
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Theme</span></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Person</span></div>
+            </div>
+            <div id="graph3d-directory" style="background:rgba(0,0,0,.55);flex:1;overflow-y:auto;padding:0"></div>
+          </div>
+          <div id="graph3d-info" style="position:absolute;bottom:12px;left:264px;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.3);pointer-events:none">Click a node or list item to focus. Drag to rotate. Scroll to zoom.</div>
+          <div id="graph3d-detail" style="position:absolute;top:12px;right:12px;max-width:280px;display:none;pointer-events:auto"></div>
+        </div>
       </div>
     </div>
 
@@ -1914,25 +1923,26 @@ function buildGraphData() {
 
 function renderGraph3D() {
   const container = document.getElementById('graph3d-container');
+  const unlock = document.getElementById('graph3d-unlock');
+  const overlay = document.getElementById('graph3d-overlay');
   if (!container) return;
 
-  // If themes aren't unlocked, show prompt
+  // If themes aren't unlocked, show prompt, hide overlay
   if (!STATE.topicsUnlocked || !STATE.topics.length) {
-    container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;text-align:center;padding:2rem">
-      <div style="font-size:2.5rem;opacity:.3">&#127760;</div>
-      <div style="font-family:var(--fd);font-size:16px;font-weight:800;color:white">Knowledge Graph</div>
-      <div style="font-size:15px;color:rgba(255,255,255,.4);max-width:400px;line-height:1.6">The knowledge graph visualizes how themes and people are connected across your meetings. Unlock themes first to populate it.</div>
-      <button class="btn btn-primary" onclick="showView('topics')">Unlock Themes</button>
-    </div>`;
+    if (unlock) unlock.style.display = 'flex';
+    if (overlay) overlay.style.display = 'none';
     return;
   }
+
+  // Themes are unlocked — hide prompt, show overlay
+  if (unlock) unlock.style.display = 'none';
+  if (overlay) overlay.style.display = 'block';
 
   // Wait a frame so the panel is visible and has dimensions
   requestAnimationFrame(() => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     if (w < 10 || h < 10) {
-      // Panel might still be hidden; retry
       setTimeout(renderGraph3D, 100);
       return;
     }
@@ -1940,17 +1950,13 @@ function renderGraph3D() {
     graphData = buildGraphData();
     if (!graphData.nodes.length) return;
 
-    // Clear previous
+    // Clear previous graph instance only
     if (graph3dInstance) {
       try { graph3dInstance._destructor(); } catch(e) {}
       graph3dInstance = null;
     }
-    // Remove old canvases but keep overlay UI
-    container.querySelectorAll('canvas, .scene-container, .force-graph-container').forEach(el => el.remove());
-    // Also remove any divs that ForceGraph3D injected
-    [...container.children].forEach(el => {
-      if (!el.id || !el.id.startsWith('graph3d-')) el.remove();
-    });
+    // Remove only ForceGraph3D-injected elements from the canvas container
+    [...container.children].forEach(el => el.remove());
 
     try {
       graph3dInstance = ForceGraph3D()(container)

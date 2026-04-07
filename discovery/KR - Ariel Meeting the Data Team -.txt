@@ -1,0 +1,298 @@
+KR - Ariel Meeting the Data Team - March 30
+VIEW RECORDING - 50 mins (No highlights): https://fathom.video/share/H6NoVNF_Yw4-u5jPJAyuzshFnGA-Ctpa
+
+---
+
+0:08 - Gregory Spaulding
+  And for background for me, I've been pretty much going to front for like 10 years, 10, 12 years now, started as IT, started working with Eileen, splinted off more to the SQL side, and then sort of just slow rolled myself into sort of like a data engineer type role where I help out the different groups and work with Adam.  And so forth to sort of do integrations and things, anything pretty much along that field line. Thanks. He's selling himself short.
+
+0:39 - Eileen G. Martin
+  He also does all the API work, all the integrations. He's, well, when we get more later in the conversation, he's the guy that's doing all the Azure warehousing stuff.  Nice.
+
+0:54 - Ariel Sofi
+  Sweet. And Eileen? The best for us. No, I'm kidding. of I'm sorry.
+
+0:59 - Eileen G. Martin
+  Yeah. I we'll doing doing I want to hear about Ariel, too. I want to know a little bit about where you come from and what you've done.  Me, I've been here a really, really, really, really long time. I started off in IT. I started off at Helpdesk, and I had an affinity for databases.  I started with a program called eBase 3+. You probably have never heard of it. I didn't even, yeah. That's how I started, and I realized that I just have an affinity towards data, and I got into that lane, and I like it.  I like the data aspect and data metrics. I've done data science. I'm SQL self-taught, mostly, but I've done a lot of good things with SQL, and I love SQL.  I know that the market is pointing at getting rid of relational databases for some reason, and I'm wanting to use all these news.  Softwares that are, like, one big memory space, and I'm like, why? I don't understand. But, hey, you know, if it's where it's going, it's going, and I'm open to it as long as it makes sense, right?  Yeah, definitely.
+
+2:14 - Ariel Sofi
+  You know, I think, and to segue off of that, I think that there's a time and a place for each tool, right?  Like, I think RDS, relational database systems, are not going anywhere anytime soon, I don't think. Like, there are some enhancements to, like, graph databases and document databases and NoSQL and stuff that are a complement to it, a good complement, right?  Effective in some cases, but I think for probably, you know, 80% of use cases still, the relational databases probably are the better option, right, in terms of, like, overhead and implementation.  A little bit of background on me. I started IT long, long, long time ago, probably, like, 25 years ago, and I've worked at.  I say every layer of the OSI model. started off like literally running cables, you know, in the physical layer.  Me too. Was a network engineer, work analyst for many years. I was a Cisco guy. I did like wireless RF systems and campus installs.  When like the cloud kind of came about with AWS, I kind of pivoted to get AWS search and go more into DevOps and development stuff.  Most recently, I was doing a lot of data engineering work for a genetic startup that was taking metagenomic samples from like seawater and then processing them through, you know, this really elaborate pipeline of metagenomic analysis tools and data engineering, you know, magic, basically, to get it into, you know, large language models and data warehouses.  Data discovery, data governance was a big thing in the last place that I was at. We used a product called Data Hub to like make these data products and then provide data lineage on these products and then make sure that we could like monetize these different reports and sell it to the university.  And, you know, different localities about, like, the seawater. So, like, for example, they were, like, they would analyze, like, seawater off the coast of Florida and then say, okay, because we find this metabolite is increasing in volume, you know, per cubic milliliter of water, then we can predict red tide, for example, right?  Like, so they would do stuff like that with different various models and large language models, mathematical models, machine learning, all kind of stuff.  So it was a really good experience. Unfortunately, they're, like, heavily geared towards academic, which doesn't always translate into getting startup funding.  So I had to jump off the startup boat for a little while and get to someplace that was already started up and stable.  So, hence me being at Kauffman-Rawson. So I've got a lot of experience in pretty much every facet of it.  I've been, like, a traditional, like, IT director kind of person, and then I've done a lot of development, data engineering, DevOps, all the new stuff, you know, IT 2.0, as it were.  So I'm definitely going to be. I'm So to speak the language with you guys and kind of get into the weeds as well as, you know, kick stuff up the chain and talk to Richard and talk to all these guys about the business value of it and stuff like that.  And so the only, I guess the main purpose of this call, not the only purpose, the main purpose of meeting was to just so I can get a picture of like where we at, like, where's the data posture?  Like, we have a data warehouse? I know that we're there seems to be like a pretty disparate like answer from everybody that I ask about, like, where does data live?  What's our data strategy? Do we have like a cohesive like data warehouse? Do we have data discovery? Like if an accountant wants to search, you know, specific industry or intelligence that we have firm for like, you know, supporting goods stores or whatever, let's just say like if that's one of my clients and I want to see if we've done this before for another client, you know, do I search for that?  Do we have anywhere to discover this data? Right. Which is, I think having data is great, but if people can't discover it and use it, then it's kind of does no good.  Right. So just understanding kind of that posture.
+
+6:09 - Adam Daube
+  You did kind of touch on something that's it's a bit of a pain point for the firm is that that very thing of identifying what is the client, you know, industry like it's a client industry, according to the client or according to their next code or according to one of the service lines that has worked with them on a specific project.  You know, there's there's many ways to look at that depending on how you hold the client. It might appear as a totally different industry.  And that's like that's been a pain point across marketing BD and then the service lines like so we usually get caught up in the middle of it and just like, what do you want us to point you at?  We got five different versions of this information.
+
+6:50 - Ariel Sofi
+  Yeah. And what is most of the I guess do we have right now for lack of a better term?  I mean, it may be different here, but like like a data warehouse or like a data. Lakehouse or some kind of structure like that?  I'm probably the closest one to the answer to that.
+
+7:06 - Gregory Spaulding
+  We don't have a formal data warehouse. We do have more specific needs as far as, like, how we target initiatives.  So there is, in essence, sort of – I mean, how I treat a lot of it is mostly we move data between different systems.  We are just now starting to get into the whole data catalog in. Data classification, defining the different pieces, know, sort of, like you touched on, opening the data to everyone so that everyone can sort of search through it.  We initially started to go on to that by introducing the data warehouse, but the need at the time wasn't really strong.  And for our purposes of the data team, we do sort of make use of – we primarily – We use SQL backend to sort of store data, but we don't store data like in a holistic way where we're archiving all the data from different systems and, you know, put in an essential place or more specific as far as like needs.  Like we need to transfer, let's say, three or four different objects from Star into Salesforce. So we do everything that's necessary as far as like, you know, to, you know, you know, develop a systematic approach to transferring that data.  And we store that in a data warehouse, not data, a database, a SQL database that we have that we have identification as far as like what applications were you, the data is for.  We track pretty much all aspects of like the transfer, know, what's being transferred, what's being changed and so forth, you know, for auditing purposes.  So, so we're doing some kind of CDC, some kind.
+
+9:00 - Ariel Sofi
+  Kind of change data capture. Yes, yeah, yeah, no, no, definitely.
+
+9:03 - Gregory Spaulding
+  I mean, yeah, we have to sort of cover what's, if anything gets updated or So yeah, so we do do that on like a more specific level.  So that is being done in SQL Server. Now we do make use of, like Eileen said, we make use of Azure.  Azure, we mostly do for data transference. Like, you know, for we, I primarily use Azure Data Factory. Okay. Azure Data Factory is the main tool we use to move data right now.  We're transitioning. This was a transition from, I should have named the name SSIS. We pretty much, yeah, we were, yeah, we were a SQL, we were all SQL database people.  So SSIS was our previous tool. Now we transition to Azure Data Factory. I didn't point out, we make a lot of use of APIs to sort of.  can we but can Internal APIs to sort of, you know, help translate all the data that's coming in because Azure Data Factory has its limitations.  We initially did start to do some kind of data warehousing in Azure due to, actually, DevTech. DevTech wanted faster lanes of less access in some of the data.  So we thought maybe we sort of employed, you know, using Azure tools like Data Lake to store data, mostly not necessarily Data Lake, but SQL Server to store the data for Azure SQL to store the data for DevTech and organize it.  And we also sort of are starting to get Domo because Domo has, like, support for federated services. So we're starting to primarily right now, we were sort of just directly pushing all data into Domo.  Domo was more or less what we... You could probably be the closest thing we had to a data warehouse at a point.  Right now, since we have a little bit more structure now, we're sort of working towards pushing that into our own infrastructure and have Domo connect to that and pull the data from there.  But yeah, basically, long story short, we do not have an exact same data warehouse, but we do have an approximation of something that can be used as a data warehouse.  Awesome. Okay.
+
+11:30 - Ariel Sofi
+  And this is, I guess, sitting in the middle, and I hate to doubly use this term, so in the star topology, sitting in the middle would be star, I would imagine, right?  Is that like the centric piece to all the client data and stuff? Yeah, pretty much. In the picture I have in my head, that's how it looks.  It really is.
+
+11:54 - Gregory Spaulding
+  Yeah, pretty much star is the primary database as far as anything. the hub. It's Yeah, right. The hub and the hub and spoke.  Perfect.
+
+12:02 - Ariel Sofi
+  Thank you. All right. And so George mentioned to me, like, the version of Star that we're using is, like, basically a fork of the actual version of Star and that we're kind of, like, at risk for not even being able to get support for it when they go to, like, the cloud version.  Is that accurate? I see you shaking your head, Eileen. Fake news. Fake news? Okay. Fake news. Fake news. Yeah.
+
+12:31 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Richard had mentioned to me that in a couple of years it's going to become a little bit more prominent, but I guess.
+
+12:39 - Eileen G. Martin
+  The real story is that we cannot go to their cloud version because their subscription model for the amount of employees that we have now would be so expensive on an annual renewal that we are not going to look at it.
+
+12:59 - Gregory Spaulding
+  Look as
+
+13:01 - Eileen G. Martin
+  That's the problem. But they have not let anybody know that they are sunsetting the SQL version that we have now.  There's no data, no information. There's no sunset date. Nothing has been told to any clients.
+
+13:21 - Ariel Sofi
+  Okay. But we know that it's happening. This isn't like a...
+
+13:28 - Eileen G. Martin
+  Oh, I imagine there's some timeline eventually, I guess. Sure. Why not? But there's no ETA on that. Okay. It will be way farther than two years.
+
+13:40 - Ariel Sofi
+  Okay. All right. So it's not an emergent thing that we have to deal with. an emergent thing. Okay. Gotcha.  Okay. Perfect. And then as far as support for STAR, we can call them if we need to. If you and Greg win the lottery, we'll say, and you guys quit tomorrow, retire tomorrow, we can call them to get their...  Engineers to help us with our version. We're not like so far left that they're going to be like, we can't support you.  We are 100% supported.
+
+14:08 - Eileen G. Martin
+  Anybody can call them and get access to their support system. They have a ticketing system for both our GL package and the practice management.
+
+14:22 - Ariel Sofi
+  Sweet. Okay. Perfect. All right. So that's a big relief. Definitely. And I think another question that I had too is, I don't know, the familiarity that you guys have with the whole West project that we're doing in DevTech?  I've only heard rumors.
+
+14:38 - Eileen G. Martin
+  We have not been brought into what that actually is. I imagine it's like an agent overseeing everything.
+
+14:49 - Ariel Sofi
+  I will apologize on behalf of DevTech for not bringing you into this earlier, because I think that's a really big mistake, especially since the success of Wes and any other agentic or AI.
+
+15:03 - Eileen G. Martin
+  You will find that our foray into the AI space is very fragmented here, there's different people doing a million different things and nobody knows what is being done and I really would like if there's anything that's going to come out of this call a little bit more cohesion and kind of direction in that department because it's a little complicated.  It's I mean, I actually literally talked to two different people doing similar things and it's a little inefficient, maybe.
+
+15:39 - Ariel Sofi
+  100% inefficient, yeah, I would say it's counterproductive even. So yeah, no, you're 100% right, I agree totally. So I think, and I just got off the call with Rich before this call, and I know that Primo had set up like an AI center of excellence, but from what I understand they haven't met, they've only met once like six months.  So I think the cadence there needs to get picked back up and then obviously the right stakeholders need to be part of that so that we can, you know, obviously, number one, consolidate effort, right?  We don't want two teams doing the same thing, right? That's just the most basic benefit of it. And then number two, I think in talking to people, we're going to elicit real needs of the firm and be able to prioritize, you know, things that many teams need or stuff that we can have quick wins on and make some progress.  So just for your edification, Wes is like basically that, like our own internal chatbot agent kind of platform that we can use to do data discovery, to do, you know, help with the workflows of tax preparation and others, right?  Other, you know, revenue streams that we have in the business and then also to manage kind of the workflows or the long-lived processes, like a full tax prep, for example, or a client onboarding, for example, which we were discovering the other day,  We were doing a little bit of process mapping on the client onboarding, and we had a bunch of questions, which I apologize, I'm just getting over the flu right now.  So I'm like a little bit getting back into the groove of things. But Yorence, I remember we had some questions relating to STAR about like when the client gets updated and when we onboard the new client.  Let me see if I can pull up the actual, whatchamacallit, the board with this in there.
+
+17:36 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Yeah, so the new client acceptance process, it's fed from the proposals and then somehow it goes through conflict checks and somehow it also touches Salesforce before or after conflict checks, we don't know.  And then it ends up, right? Adam was part of the last call where we were talking about Salesforce stuff.  So there was some congruence here. And I guess, Ariel, if that rang a bell somewhere.
+
+18:13 - Ariel Sofi
+  Yeah, I think the conflict check, I think the first place that we were looking at was that like data gets entered manually from sales.  Like somebody takes the data from Salesforce, manually enters it into the conflict check system. And then we spoke to...  Like the conflict check team last week, and they were like, well, that has to happen first before we even put it into Salesforce.
+  ACTION ITEM: Email Richard's Visio workflow to Ariel - WATCH: https://fathom.video/share/H6NoVNF_Yw4-u5jPJAyuzshFnGA-Ctpa?timestamp=1121.9999  so there's some ambiguity relating to these processes and what's the critical path for these processes. And we were just trying to map that out and we were hitting a wall like almost at every step.  So any light that you can shed on that would be highly appreciated.
+
+18:52 - Adam Daube
+  Has Richard showed the workflow, like the way that he... The way that he... We started to work on this a few years ago, and he goes back to it sometimes.  It's like a Visio thing. can find it. Yeah, you can send that to me later.
+
+19:13 - Ariel Sofi
+  doesn't need to be now, but yeah.
+
+19:15 - Eileen G. Martin
+  Aaron, the way those conflict check works, there's certain entity types that require a conflict check before we do anything with the client.  If it's just a tax-facing client, it does not go through a conflict. That is the distinction. There's five clients and a test date, which is like assurance.
+
+19:41 - Ariel Sofi
+  Assurance has background checks as well.
+
+19:46 - Eileen G. Martin
+  They go through a background check and a conflict check before we set them up. Okay. Everything else will go directly into the NCAA in Salesforce.  It's in. Thanks, for
+
+20:00 - Ariel Sofi
+  Okay, didn't, I have, I still haven't heard anything about, this is the first time I'm hearing about background checks.  Yes, all at the states actually have a formal background check. Beautiful. Okay, awesome. This is all great information. And so for Wes, I guess this is a more selfish ask, for Wes and what our team's trying to achieve, we would want to tap into some of that institutional knowledge that we have in a knowledge base.  of some kind. What would be the first, like, if we wanted to put something that was, let's say, readily accessible to anybody in the firm or some level of knowledge, is there some data catalog or subset of data that we could tap into and have these agents kind of, you know, I guess, traverse this knowledge graph or knowledge base?  time. Uh, thank thanks. So, So we're kind of developing an LLM. Is that what you're doing? We're developing agents that will use existing foundational LLMs to traverse our knowledge base.  So, like, we don't want to develop a foundational LLM that takes millions of dollars. What we're going to do is fine tune existing LLMs.  Thank you, Adam. So we're into account not only the context that our data lives in, but then also the different entities that we deal with, how they relate to each other, et cetera.  We're then embedding that knowledge, right, as an aside to the existing relational data store. So we'll have the existing SQL stuff.  And then on the side, we'll have a graph representation of how all these things are connected. Like, this is an organization.  It's connected to a subsidiary because it owns that subsidiary. And the LLMs need to understand these relationships. at each two?  to give contextually accurate information, not only contextually accurate, but like temporally relevant. So like, does this document relate to tax year 2024 or 2025, et cetera?  Because LLMs natively don't understand time, right? So we have to understand, like, we're only going to pick from this subset of data when we're giving the data to the LLMs so that we get only relevant.
+
+22:24 - Eileen G. Martin
+  I'm sorry, you're kind of confusing me a little. Are you talking about client-facing data? Like, like how the profile of a client?
+
+22:32 - Ariel Sofi
+  So in the business case of like, we're a tax professional, let's say a returning client is doing, and I'm just going to use tax because this is the only thing that I really like have wrapped my head around thus far in the firm, right?  So let's say we're doing a tax preparation for an organization that has been a longstanding client, right? Um, I want to, I'm a tax pro, I would assume, and I could be wildly inaccurate and please let me know if I am.  but I would assume that. You're going to want to understand maybe the previous year of history or, like, what's going on with that company in the previous tax year, what's going on with, like… Okay, so you're talking more, like, data science-y stuff.
+
+23:13 - Eileen G. Martin
+  You want to use our data to gather data from clients.
+
+23:18 - Ariel Sofi
+  To develop insights from existing data, exactly. Yeah, okay. So is the idea to get, like, an MCP server with a read-only kind of service account?  Okay. I understand. I what you're saying.
+
+23:31 - Adam Daube
+  So, Eileen, he's wanting to set up, like, a way to interact with SQL that's safe for both sides of the fence so that they can have a way to get this information and get context and package it up for an agent.  And so there's no way for us to, like, cross-stream. So, like, we'd have to set up a service account that only has read access on the stuff that we wanted to have.  Precisely.
+
+23:58 - Ariel Sofi
+  For now. And then eventually at some point… When that gets, you know, really dialed in, and then we'll have, you know, the person's user account, right?  Whoever is that user, the permissions will be related to that user. So, like, if they have access to read that data in STAR or whatever database, then the agent will produce that answer.  If they don't, then it won't, right? And we need that level of, like, granular control, unfortunately. So I guess the account would be tied to the user.  We're getting into the weeds there a little bit, but essentially, you're 100% correct. That's what we want is, like, that bridge between an LLM and the existing data set.  And it could be a very limited subset of data that we're just starting with a proof of concept, right?  It doesn't need to be the full shebang right out of the gate. But we need to start getting into that mode so that we can identify pitfalls and see if we're getting the accurate data that, you know, is being requested from the business.  So, I guess... guess... Do some thought to that, and then see if we can come up with a subset of even old data, right?  Like, we can just use old data that is no longer even relevant to test with it. We know we can do it with sample data, but we haven't tested it with, like, the schema that we have.  Now, Ariel, you say data.
+
+25:17 - Gregory Spaulding
+  I mean, do you guys have an idea of what you're looking for? No.
+
+25:21 - Ariel Sofi
+  No idea. But, like, what would – and this is part of my kind of charter right now is understanding the business cases, understanding the data needs of each team and figuring out – you guys would have way more insight into that than I would.  Like, what data does a tax professional need from STAR or from any other system, for that matter, to help prepare taxes better for their client this year, right?  Or risk advisory or other people. I don't have any insight into that just yet. You know, forgive my ignorance, but that's kind of what I'm working toward understanding, you know, while, you know, as the first part of my charter kind of here.  Thank Or even things that are not directly related with the deliverable, right?
+
+26:04 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Something like we can ask a chatbot, hey, what are the clients that I still have been built or have outstanding bills?  And it'll just produce a list, you know, rather than them having to go into Star or go into Domo.
+
+26:20 - Ariel Sofi
+  Absolutely. Eventually, what we want, like, golden path target state kind of thing is going to be like, you know, find me the relevant IRS tax publications or tax breaks or some relevant legislation to my client industry that would help them, you know, deduct more taxes, like stuff that would assist deep knowledge work with that subject matter, right?  And that we can pull contextually from IRS publications, from our own data, from previous returns, or let's say two tax professionals are preparing taxes for similar clients, right?  And, you know, one tax professional knows about this obscure piece of legislation. We want to pick up on those smaller things so that we can offer that advice to the other tax professional that may be more junior and doesn't know about this.  And these are just way left field examples. I don't know anything about taxation. I am just an engineer trying to learn the ropes here, as it were, related to like Kauffman Ross.  And so I'm not looking for these answers today. I'm just kind of trying to show you guys where my head is at and where our team, like the needs that we're going to need to kind of coalesce together from an architecture perspective.  Right. And MCP is a good starting point there because you guys wouldn't have to technically do much to the existing infrastructure.  We just have to connect the dots. Right. Which I think is the best, easiest, most logical win for all of us.  Right.
+
+27:54 - Adam Daube
+  Yeah, I think what you were saying makes sense about like that fleshed out example, just starting with the base.  Yeah, of asking it to return the list of clients that are outstanding balance or whatever. That's clearly in the data, and it should be one thing to set it up so that we can get the agent access to that data, and then the other thing to have a reason about the data.  Yeah, awesome.
+
+28:25 - Ariel Sofi
+  Makes sense.
+
+28:26 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Yeah, because Star doesn't really hold or doesn't hold any of the engagement related stuff. All of that lives in what we call the F drive, which is… Wait, what are you talking about, like, the deliverable documents themselves?
+
+28:40 - Adam Daube
+  Yeah, yeah. Like, the deliverable documents themselves are in a process to get migrated into that, like, M files, the document management system.  So, like, there's a mixture. They're out there in different places, you know, mostly network drives, but also box, et cetera.  So, like, a lot of that stuff you're talking about, like… Tell me about… If client's financials, like, no, we wouldn't have the access for that.  But it would be like, tell me about my client's billing history. Oh, yeah.
+
+29:13 - Gregory Spaulding
+  They would ask, too. Like, tell me how I can get this next.
+
+29:16 - Ariel Sofi
+  Like, if we wanted to ask, like, tell me about the financials. Where would those documents and that data actually be?
+
+29:23 - Adam Daube
+  So like, if we're talking about the client's financials that we've been reviewing, like those documents live in the network drive, or at least they should live in the network drive.  But that whole process of extracting that data, using that data. So this is, okay, now I'm starting to put the pieces together.  Because, like, Richard talked about that with us, and we said, okay, this is like a lot of work and potentially, you know, a way to do it is this, that, and the other thing.  And now I'm kind of understanding, so this is the impetus behind this project is wanting that to digest client financials so that we have that.  Ability to interact? gotcha.
+
+30:03 - Gregory Spaulding
+  Yeah, just off the top, I mean, pulling it from the data sources, like from the F-drive and so forth, that's going to be a big lift.  Because it exists in like 50 different formats. And if they're in case, we're going look. We have the pipeline built out.
+
+30:28 - Ariel Sofi
+  They'll look at the document, OCR it, figure out that it's this form or whatever, and then extract the data from it.  We have the pipeline for the document recognition already built out. So we can do that with documents already. I guess it would be a matter of pointing it at the right documents.
+
+30:45 - Eileen G. Martin
+  Right, but a lot of the firm is storing the trial balances and financial statements inside something called caseware, which is not discoverable in the general sense.  to to happens inside do For So, But, you can learn. Thank you. That you're, you have to load the application to find it.  So caseware, so it's locally installed in Citrix.
+
+31:09 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Okay.
+
+31:10 - Ariel Sofi
+  And it feeds, like a caseware pulls like PDF documents, or these are like internally? You attach the PDF to a tree inside of the caseware software.
+
+31:20 - Eileen G. Martin
+  And it stores it ostensibly somewhere? No, it will store it outside as a, you know, a PDF. Right.
+
+31:28 - Ariel Sofi
+  But you may not know what it's for.
+
+31:30 - Eileen G. Martin
+  It might be named first year financial, but you don't know. right.
+
+31:36 - Ariel Sofi
+  You know, honestly, we're not going to care about the name of the file because in our system, it's going to get named some file hash anyways.  Like for, and this is definitely getting into the weeds, but like in, in a lake house architecture, what we'll do is take the data from it and store it in like a parquet file.  And that parquet file will just be in a S3 drive, or like an Azure. And it's just going to be a collection of Parquet files that we will read and do SQL queries like a database, right?  Like we can query and that helps with cost, obviously, because S3 storage is a fraction of what hot database storage is going to cost.  So we don't really care about the name of the file or how it's organized because the model is going to go in there and read the content of the file and then classify it properly and attribute it to the right client, attribute it to the right form type, and pull all those attributes for us.  Literally, you can give us a volume of random PDF files named, whatever you want, and we'll figure out and classify those automatically.  So that part is not necessarily a deal breaker, right? As long as we have access to the PDF files to read them, at least we can pull data from them.  The kicker is going to be like, how are they secured?
+
+32:53 - Yorence Ramiz (yorence.rafel@gmail.com)
+  know, the edge case is going to be a really big kicker. So let's say a client has a business and themselves as, like, that's in a client group, right?  So they have multiple businesses and then their own personal tax return with their wife, right? Yeah. And sometimes they're trying to fix this, but sometimes they'll bring in their kids' tax returns, right?  But they won't actually create a new client for their kids. They'll just bin them under the personal tax return.  Okay. So the data will be a little bit conflated because it's bringing in, like, the data categorization, the way that we do it in a relational database, it's not very clean in certain aspects.  I would say that's an edge case, but it happens, like, a few people. Yeah. Okay. And there's a variety of those, you know, types of things.
+
+33:55 - Gregory Spaulding
+  So, Ben, like said, a lot of the data that you guys are talking about— So yeah, the way that we would handle that is each user would get a token, right?
+
+34:13 - Ariel Sofi
+  Based on the auth system or the auth attributes that they have, right? And so the system as we designed it is basically RBAC with ABAC.  So role-based access control with also attribute-based access control. And the difference is role-based would say, if you're you're in the enterprise client, and I'm making all of this up, if you're in the enterprise client taxation group, and this is an enterprise client, then you would have access to that, right?  That would be role-based. An example of attribute-based would be you have to be in the role, it has to be during tax season, and you have to be in the office to be accessing these files from 9 to 6 p.m., right?  So we have very granular control of what that token privileges are. Now we need to map that over to the model, and we pass that to the model with the request, like this is the token, this is the access token, and so we match that with whatever access control is on the other side.  So if it's RBAC on this side saying, okay, does this person have this role, then the model will read that data.  You know, the model is only going to use the token that the user has attributed to them, right? The model itself doesn't have any token or any agency itself to go out.  You know, the model doesn't want this data itself, right? We're just going to pass that token off to the target system and say, okay, we're going to pull the data based on off our token, all the data that we can find on this client based on our privileges, right?  And then what we get back, the model will say, hey, you don't have access to this, or this is the data that we found based on your access privilege.  Eileen had her hand up a little while ago. Oh, I just wanted to know if you're talking about scraping the information.
+
+35:59 - Eileen G. Martin
+  . Are that we have in the tax return program or if you're talking about financial statements that we perform based on a client's company that have nothing to do with tax returns?  Yes.
+
+36:13 - Ariel Sofi
+  Yes. That is the answer. Yes. All of it. All the data. All the things. Okay. So, yes.
+
+36:23 - Gregory Spaulding
+  I mean, we've approached this topic before and I think, yes, security was the biggest issue with it. I mean, getting the data is not an issue.  Categorizing data, mean, we can do that. It's, yeah, I would, yeah, there has to be like a very deep process.  And I'm not even sure, are we able to even use our client's data? I don't know. I don't, yeah.
+
+36:51 - Adam Daube
+  do kind of want to just show you something. Cause like, just, just from like, okay, there's all these different service lines, right?  And BCS, Business Consulting Service. This is one of those service lines, so we've been working with them on migrating data from their network drive.  So this might be just like an edge case to consider, but like, okay, you want to absorb the client's financials, right?  So here's the engagement. First of all, like, you know, client engagement, the way it's named, et cetera, you can't really be guaranteed that these entities are necessarily the entities you want.  And then, okay, I want to absorb their general ledger. Do you want this one or do you want this one?  Why? I don't know. But that's what I'm saying is that we get into this very thing of, like, what is what because this group maybe has set this up as this and then another group has set it up as that.  And so, like, is the balance sheet the balance sheet you want for this and what entity is it for and what period, you know, all these things.  Is it there in the data? Maybe. Somewhere. Yeah. Gotcha.
+
+37:55 - Ariel Sofi
+  A lot of ambiguity.
+
+37:56 - Adam Daube
+  So, like, even just getting it from there to this. There's a lot. There's a lot of preprocessing steps that need to happen there.  right, because the default state of the network drives is you can manually create folders, and everything's manually created. So everything's dragged, dropped, created, nested folder structures that, you know, kind of, it gets in the way of like, well, so getting it migrated into mFiles gets us out of that flow of manually, but this is just starting for these groups.  So, like, BCS is the first service line that's really using this. But this is just, like, part of the discovery of, like, oh, yeah, it's going to be a little harder than, you know, just, like, this as this and that as that.  Like, yes, this is a balance sheet, but is it the balance sheet you want? Right. Understood. Understood.
+
+38:50 - Ariel Sofi
+  Okay. So it's a little messy under the hood right now as the current state. And there needs to be, from what I'm hearing, significant undertaking, too.  To make, we'll say, refined and accurate hierarchical data catalog that would be authoritative, right?
+
+39:12 - Adam Daube
+  Yeah, I would say there's a substantial challenge in, like, right, classifying these categories. Like, are these things the things that they purport to be for the things they purport to be for, right?  Like, is a lot of validation, understanding, and getting, like, the manual tagging done. Yeah. Okay. Yeah. So definitely tagging is good.
+
+39:41 - Ariel Sofi
+  We want tagging. I don't know if we want manual tagging on all this stuff, but tagging is definitely good.  So veracity of the four V's of data, right? Like, the veracity component is questionable at best, from what I'm hearing.  Um, let's. Talk about variety. It doesn't seem like we have too much variety of data, right? Like, it seems like a lot of it is spreadsheets and tax documents.  Am I off base here? Like, is most of it is structured data and, you know, documents that are semi-structured?  Yeah, and like QuickBooks backups.
+
+40:21 - Adam Daube
+  And it depends on the service line. Like, for risk advisory, you might have database dumps. You might have, like, all kinds of different fragments, artifacts of things.  And I know a little bit more about that because I've been in the weeds with risk advisory a while back.  But, like, you'll see that across the board. A lot of these different groups have very different sets of data that they must gather.  But generally, like, yeah, it's usually like an analysis in the form of a – it's going to be a PDF that's created out of a PowerPoint or a Word, you know?  Right, we're not getting, like, audio and video recordings.
+
+41:00 - Ariel Sofi
+  That's what I'm trying to get at. Like it's mostly structured text data or semi-structured text data. There's some videos in there.  So like I did this So there is unstructured data.
+
+41:11 - Adam Daube
+  I scanned and categorized things to try to understand what was actually in the network drive. So like I set this like this bot to go through and dump into a SQLite database so that I could see back.  And like there were quite a few video files, but it's like mostly like people would copy paste a folder.  looked like it's just like copies of the same meeting or something. So like I think there are some evidence based things for maybe fabs and things like that.  But I, you know, I didn't go through and categorize those because I don't have the permissions for those drives.  Gotcha.
+
+41:48 - Ariel Sofi
+  So veracity, questionable. Variety, structured and unstructured. Let's talk about velocity and volume, uh, volume wise. What are we thinking?  Like the. Whole, firm, in total, all-in, ballpark, the volume of data that we have. Is it at the petabyte scale, exabyte scale?  What are we talking about here? I don't think we're even close to that.
+
+42:12 - Adam Daube
+  I think we're net 100 terabytes. Oh, okay. yeah.
+
+42:17 - Ariel Sofi
+  Do you think that's accurate, Eileen? Like, based on what I've seen from some of the- Before or after retention?
+
+42:26 - Eileen G. Martin
+  Well, I guess that's- We do retention, which we're going to trim that down, because some of those data folders are beyond the seven-year average.
+  ACTION ITEM: Email retention policy to Ariel - WATCH: https://fathom.video/share/H6NoVNF_Yw4-u5jPJAyuzshFnGA-Ctpa?timestamp=2555.9999  Well-known.
+
+42:40 - Ariel Sofi
+  Gotcha. And so that's our retention cutoff, seven years, legally, as well as required to be? Average.
+
+42:46 - Adam Daube
+  I'll you retention. It's like, it's a policy, but it's aspirational. A lot of people aren't conformant to it, and there's no easy way to measure this across the firms.-year  So I'll share with you that document, though, so you got that.
+
+43:03 - Ariel Sofi
+  Okay, awesome, thank you. And then let's talk about velocity. So you're saying 100 terabytes total, or 100 giga, you said 100 terabytes, right, total?  Yeah, because there's different drives, and I'm not privy to every storage that we have.
+
+43:20 - Adam Daube
+  But if we're just talking about network drives themselves, then I would think less than 100 terabytes is accurate, because the ones that I see are like 30.
+
+43:31 - Ariel Sofi
+  Okay, let's talk about velocity. Is that 100 terabytes in the entire 60 years of existence that the firm has had?  Like, this is how fast we're accumulating data. during tax season, how much data are we getting per day? Like, I'm trying to get a feel of, like, how fat that data pipeline needs to be, right?  Like, what it needs to handle in terms of ingest of data. What's the velocity kind of metric of a gigabyte a day, 100 gigs a day?  That's the kind of thing that I would think we could leverage. leverage I I
+
+44:04 - Adam Daube
+  Yeah, I don't know exactly what that looks like, but they're going to have a more holistic understanding of what that data picture looks like anyways.  So this is all kind of like guesswork for me. I'm just spitting out educated guesses. That's fine.
+
+44:18 - Ariel Sofi
+  Believe me, I'm just grasping at straws at this point. I'm throwing darts in the dark right now. So it's all good.  We're in the same boat in that regard. Okay. This paints a much clearer picture than I had. So this is great information.  Thank you guys for your time on this. I don't have any more questions for right now. I think what I need to do now is get back with yorence and the team, wrap my head around touching each one of these systems and just digging in and looking at it once just to kind of figure out what's going on there, what our access actually looks like in practice.  Um, and then I think I want to follow up, um, both with you, Greg and Adam on like the, the domo side of things and then the Azure, um, data.  Uh, you know, And then Eileen, I'll definitely follow up with you on like more like the people aspect of it and like the compliance and how we can like make the compliance effortless and, you know, just that's the only way we're going to make it like enforced, right?
+  ACTION ITEM: Formalize read-only service-account requirements for STAR/SQL; loop in Eden - WATCH: https://fathom.video/share/H6NoVNF_Yw4-u5jPJAyuzshFnGA-Ctpa?timestamp=2721.9999  Is that people don't have control over doing it or not. Right. So, right. But yeah, anything else that you guys have for us for DevTech?
+
+45:32 - Adam Daube
+  I guess, yeah, I guess more around the, what you guys need for that connection. Like we'll keep, we'll keep fleshing that out as we meet so we can get that.  Like, so, yeah, it would be good to have what the, what those requirements and how that, how that works going back and forth with that.  Right. Yorence, I'm going to formalize that, but I think for right now, like the lowest risk, the not privileged.
+
+46:00 - Ariel Sofi
+  Information that we can get access to on a read-level basis would be a great starting point, and then we'll just tie an MCP to that, and that way we can just do a proof of concept, like, hey, find me some data related to this subset that we have access to, just to kind of prove out that model, and if it's going to work for the stakeholders, I think would be a great starting point, but yorence.rafel definitely, like, formalize that a little bit more in the coming days, for sure.  Awesome.
+
+46:27 - Adam Daube
+  If we could get that set up with Eden, too, put him in the loop so that we can bring him in to get, like, the, the, I'd like, I'd like to get their guidance on, like, the service account and this pass-through of permissions, because I love that concept of, like, all that stuff just working.  That's beautiful. Like, let's, let's do that and make it work that way so that it's just easy for everybody.  Yeah, absolutely.
+
+46:50 - Yorence Ramiz (yorence.rafel@gmail.com)
+  I think it's, uh, also important for us to let us know, let you guys know of our new approach that we're trying to do.  Um... We're going to be building a lot of things in a sandbox. It's going to be, you know, not editing production data or anything like that, and it's going to go through security checks that are, you know, best of breed, and then we would be providing those security reports to security themselves so that then they can give us a thumbs up whenever they do, we just flip a switch, right?  So we're essentially working within a very contained environment so that things don't break, and then once we get the lesson from, yeah.
+
+47:37 - Ariel Sofi
+  Rather than things do break, and we break them really quickly, and we fix them quickly, and we identify issues quickly, rather than, you know, waiting for security approvals at each step, because there's only two of them, and it's obviously a bottleneck.
+
+47:48 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So, yeah, so we want to break things, move fast in a safe environment, and then when we're ready to go, we're like, here's everything, here's how it works, here's all the security stuff we've done.  Let us know when you're ready, and we'll just turn it on.
+
+48:05 - Ariel Sofi
+  Sounds good. So, yeah, and then I think that that whole AI center of elections, which I'm sure you guys are probably a part of, if you're not, you definitely will be, I'm sorry, more meetings, but we're going to try to pick up the cadence on that to at least once a month, if not once every couple of weeks so that we can move a little bit quicker and get, you know, a little bit more traction in a unified, you know, consensus-based kind of approach so that everybody's on the same page.  Because everybody I ask is like, huh, what, like, they don't, nobody, it's the same answer from everybody, they have no idea what we're doing, we don't know what they're doing, which is obviously not a good operating posture, so we're going to thank you guys for helping us make inroads into, you know, kind of dismantling those silos and walls that are preventing us from working together.
+
+48:50 - Adam Daube
+  Of course, yeah, I think, I think in the vast majority of these cases, they're soft silos, like just kind of, you know, unintentionally put up.
+
+49:00 - Ariel Sofi
+  Right.
+
+49:00 - Adam Daube
+  So I think it's very easy to break down those walls and communicate like we're doing. So I love it.  Absolutely.
+
+49:06 - Ariel Sofi
+  Yeah. Awesome. Awesome. Well, thank you, guys. I appreciate it. I don't have anything else. You want to know if you got anything else?  Oh, I don't. Sweet. Awesome, guys. Thank you so much for your time. Appreciate it, guys. It's good to meet Nice meeting you.  All right. Take care. Bye.

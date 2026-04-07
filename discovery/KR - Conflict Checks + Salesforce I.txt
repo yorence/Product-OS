@@ -1,0 +1,168 @@
+KR - Conflict Checks + Salesforce Integration Intro Conversation. - March 24
+VIEW RECORDING - 23 mins (No highlights): https://fathom.video/share/wXoamX2SbbFu8yz9cncy5sAqP4L_AxVU
+
+---
+
+0:00 - Yorence Ramiz (yorence.rafel@gmail.com)
+  DevTech, to introduce yourselves to Ariel, and then we can start nerding out for a little while. Yeah, so I'm new to the DevTech team.  Lots of experience in data pipelines and data engineering, so we're hoping to kind of build some automations and stuff to make everybody's life a little easier and kind of get with the agentic and AI times, as it were.  And I guess today, the goal of today is kind of understanding the sales force to star kind of handoff and how it comes from sales force, et cetera, and see if we can't figure out some automation or something to tie in these two systems that I think are currently joined only by human hands.  Yeah, and essentially this came from Friday's session that Ariel and I were kind of a value stream mapping what happens as far as we know.  with client acceptance. And we figured that you guys in the Salesforce team would have more color to add to that story.  And yeah, that's why we called this meeting. So, Salesforce friends. Yeah. So, hello, welcome to the team.
+
+1:23 - Melissa Caban
+  I lead the Salesforce implementation for the firm. So I have my tentacles and everything related to Salesforce across the firm, like down to these integrations, all the way to training and developing training materials and getting, you know, all these service lines onboarded.  And, Anami is on my team. Um, I would say Adam's on my team too, but he's technically not. So we lost him.  Um, if you guys want to explain what you guys do. Sure. Adam Daube.
+
+2:00 - Adam Daube
+  So I've been at the firm for about – since 2019, I joined Risk Advisory, and then I made my way into the data team.  So I've been working with different stakeholders on projects. So Salesforce is one of those projects where we wove the data up.  And just to give you a little background, so, like, we've got this thing called DbAmp, which is this tool-by-C data.  It's used to manage SQL Server pipelines. So that's currently how we connect Salesforce into STAR, and then we have staging tables and such, like – so there's data products that we build around the central technology being SQL Server.  So just – and there's Azure Data Warehouse in there, too. But for the Salesforce side of things, it's largely all contained in SQL Server using DbAmp, stored procedures, to maintain.  Okay.
+
+2:58 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So, okay No. No. No. No. Hi Ariel, welcome to the team.
+
+3:02 - Anami Kumpawat
+  I'm a Salesforce administrator and developer here at Coughlin Rosen. I like mainly focus on the administrative tasks as well as the development activities on the Salesforce side.
+
+3:17 - Adam Daube
+  Cool.
+
+3:18 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Well, awesome. Got the intros out of the way. So, welcome to the team, Ariel. Ariel will probably be interfacing with these folks.
+
+3:32 - Adam Daube
+  So, I'm going to jump kind of straight into it.
+
+3:36 - Yorence Ramiz (yorence.rafel@gmail.com)
+  I think Ariel might have, or I might have access to a Miro board that we were using together. You can show your screen or I can show.  Yeah, you can drive. I'm trying to log into it now, but this was on my other mission. All right.  One second. Let me find the link. of adding. have standing there. to this as we go.
+
+4:01 - Adam Daube
+  So Greg Spalding is the most knowledgeable person about these data pipelines. So like Eileen Martin is the head of the data department.  And under her, I work, Greg works to maintain these pipelines. And then like, so on the side with Salesforce, Melissa and Anami are, are typically passing requirements into us.  So that's kind of how it's flowed.
+
+4:28 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Yeah, sorry, I didn't realize this was connected to new client acceptance.
+  ACTION ITEM: Send Miro board link to Melissa, Adam, Anami - WATCH: https://fathom.video/share/wXoamX2SbbFu8yz9cncy5sAqP4L_AxVU?timestamp=269.9999
+
+4:32 - Melissa Caban
+  If not, I would have told you we needed to include them as well. Or even sorry, didn't realize it was connected with the associate.  I can't find the mirror board. I can share it.
+
+4:43 - Yorence Ramiz (yorence.rafel@gmail.com)
+  I just, I just, I just it up. Okay. Oh, nevermind. It's, it's gonna make me restart, I think. Okay.  I will send you the mirror board.
+
+4:57 - Adam Daube
+  Yeah, we'll, we'll, I guess.
+
+5:00 - Yorence Ramiz (yorence.rafel@gmail.com)
+  We're kind of unprepared right now, but it's okay. We'll work through this. So essentially what I walked them through is what I know at a high level happens through Salesforce and like the new opportunity creation and that whole pipeline and then how that opportunity is somehow manually added to conflict checks.  And that's kind of where we stop because we already found a bunch of points of, you know, of bottlenecks and manual entry between those two.
+
+5:38 - Melissa Caban
+  can, I can, let's take a step back. Yeah, yeah. There's a lot of stuff there that's assumed. Okay. So manual entry, people create opportunities manually, right?  Like something comes up, they'll say, okay, this could potentially be something. I'm going to create an opportunity. Sure. Okay.  Opportunities come to us in different ways. I know you mentioned conflict check, but not every service line does a conflict check.  So there's that. So again, there's different avenues as to how an opportunity is created. Now, it goes through several stages, blah, blah, blah.  We get to closed one. If that opportunity is closed one, it can be incorporated into new client acceptance. So let's say we say ABC company had an opportunity and they're gonna be a new client.  We'll start the new client acceptance form. You can pull up that ABC company and then you can also see any open opportunities associated with that.  You can click on them and continue through your new client acceptance process. It goes through an approval process on our end.  Once it's approved, basically it'll then push two star. And then the normal sync between star and When I say normal, normal data points tied to that client will then push back into Salesforce.  That's kind of like the loop. Now, conflict check only exists in Salesforce in our sandbox. So keep that in mind.  So right now, any conflict checks that are being created, once we set up that regular sync, we'll get that in Salesforce.  And there is a flow in Salesforce that will, once the conflict check is cleared, it will automatically generate an opportunity.  And then once that's in prod, we will then be able to then follow back that same loop. Yes, Yorence.
+
+7:48 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So I'm going to square away a couple of words before we keep saying Salesforce words. So an opportunity, guys, it's essentially what is created.  Prior to that being an actual engagement or a client altogether. Is that correct?
+
+8:06 - Melissa Caban
+  An opportunity would be basically an engagement before it's an actual client engagement. Okay, great. So it's like the prospecting portion.
+
+8:19 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So during this opportunity phase, currently, there's like we just I think you mentioned it as well. I know that there's two paths that could be generating opportunities.  There is doing it through Salesforce, which is the proper way. And then there's people that just created a conflict check.  And then we're giving you, quote unquote, a feed to your staging that we're still testing, right? So that is something that we identified that should be improved.  We think that it should all... ... We always and always start with Salesforce, and we want to eliminate the ability for there to be a conflict check that gets created without a Salesforce opportunity tied to it.
+
+9:16 - Melissa Caban
+  The problem with that is that then we're going to end up having a bunch of opportunities without cleared conflict checks.  Then how's that?
+
+9:26 - Yorence Ramiz (yorence.rafel@gmail.com)
+  What's the issue that you foresee with that?
+
+9:30 - Melissa Caban
+  Because it's like data that we don't need because there's the conflict check wasn't cleared. And so technically, it's not an opportunity.  Like it didn't go anywhere.
+
+9:41 - Yorence Ramiz (yorence.rafel@gmail.com)
+  You're just checking to see if somebody never, yeah, never really came.
+
+9:45 - Adam Daube
+  We never really had the opportunity to engage in business because the conflict check resolved to do not engage in business.  So we never could flesh out an opportunity or even create one. Well, mean, if there's no conflict check created for it because it's not.
+
+10:00 - Yorence Ramiz (yorence.rafel@gmail.com)
+  If required, then couldn't that be a business rule that we just say, hey, it's a tax, it's a tax engagement.  We don't do tax engagements on conflict checks today. So just skip that part, skip that validation.
+
+10:16 - Melissa Caban
+  I don't think we should use a hypothetical for instances where we don't do conflict checks, because in that scenario with tax, we don't have cleared or not cleared conflict checks.  For the other service lines, we have a not cleared conflict check where we can't do business with them. to have an opportunity for them is like, we know better.  It's almost like we know better why we're just putting it there for the sake of putting it there. Tax is kind of operating blindly.
+
+10:53 - Adam Daube
+  Unless we start making everybody do a conflict check, but I still don't think we should have not.
+
+10:59 - Melissa Caban
+  No. No. No.
+
+11:00 - Yorence Ramiz (yorence.rafel@gmail.com)
+  If we don't have to do the work, there's no reason to force somebody to do it, right? I think if we have just the right event-driven signaling from each systems, so if you mark, so let's say by the service line, we know already whether there is a conflict check required or not.  And if there's not one, then really the status of that opportunity in Salesforce would dictate the next step, right?  If it is a one opportunity, that's going to dictate the next step based on the service line. If a conflict check is required, so from the opportunity, you know, a status change could say, you know, requires conflict check or what have you, and then that could trigger the conflict check process.  Once that is cleared or not cleared, then that relates that information back to Salesforce, which would then set or determine the next status.  Does that sound? Yeah, I understand what you're talking about.
+
+12:02 - Melissa Caban
+  The only thing is that technically, if we were doing, let's say, like, all right, conflict check occurs right before they become a client, that would work.  But we do conflict checks before they become an opportunity. The idea is, like, we don't want them going through the opportunity phases if they're not even liable to be a client.  Understood.
+
+12:28 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So you're saying in every single case, as a matter of course, the way that we do business is conflict check is the first thing that happens, if the business line requires it.  Yeah. Okay.
+
+12:41 - Melissa Caban
+  All right. So that pretty much answers.
+
+12:43 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Yeah. So then for those opportunities that don't go through conflict checks, how do we, how do you? You proceed to the next step.  You just start with opportunity in Salesforce?
+
+12:58 - Melissa Caban
+  We never check the conflict. Because they're not required. there's never a time where like tax goes and says, oh, there's a conflict here.  During new client acceptance, there is a review process. So if there is supposed to be somebody paying attention to something, that happens through the review process, but it doesn't happen through a conflict check process.
+
+13:20 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Where's, I guess, where's the first place where that client information is recorded in our system? Is it Salesforce? Like in the case of let's do ideal case, there is no conflict check required for this business line X, Y, Z, you know, client, A, B, C, we need to start inputting it as an opportunity or what have you, begin the pipeline with the customer.  I'm not even going say opportunities. I don't want to like steer it one way or another. Where's the first place that their client name, you know, parties, information, et cetera, gets recorded?  Is that Salesforce or is that another system? Yes, it is Salesforce.
+
+13:58 - Melissa Caban
+  Okay, Salesforce Salesforce is the big. Gaining of a value stream regarding clients.
+
+14:02 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Okay, perfect. So, in the case that we do conflict checks for that business line, does the customer or opportunity or prospect or what have you exist in any capacity in Salesforce?  Or is it coming into conflict checks first in the case that the business line uses the conflict check?
+
+14:23 - Melissa Caban
+  Yeah, it would go through conflict check before it gets through to Salesforce. Okay. All right.
+
+14:31 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So we have like a chicken and egg problem to make like a standardized solution. Basically, we'd have to, what if there were another interface that dependent on the service line, the information could be put into that and then either triggered a conflict check or populate Salesforce one or the other?  Would you guys be opposed to, to populating the same information in just a different interface or have Having that populated somehow, you know, automatically to me, like, um, like if were to pull a Salesforce account and yes, if there is no Salesforce yet, let's say we do a conflict check.  Um, the information that comes from that conflict check, from what I understand today is manually then input into Salesforce.  Is that accurate? Yeah, not necessarily.
+
+15:27 - Melissa Caban
+  So right now, nothing's being populated from, because remember, the only, the only place that conflict check exists in Salesforce is our sandbox.  And so we get that not parsed out by individual, like we don't have it broken out by like, this is a company, this is the account.  Um, well, that's this thing that, you know, doesn't say this is the person associated with it. Um, the other thing is that like, for example, for, I'll use fabs because they probably use conflict check.  of  you. Thank They have matter parties, right? So they'll have like, this is the plaintiff, this is the dependent, this is the husband.  We're not tracking those as contacts, right? We just have them as their role as a matter party for several reasons.  And so for now, we don't get that as like a table, like this one record is this, this one record is this.  We get it as one. Do you want it as a table?
+
+16:30 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Like, does that add value if you were to get it as a table? It could add value.
+
+16:35 - Melissa Caban
+  Yeah, we got it that way. I am a little worried because it is a little complicated and not as clear for the matter parties.  It's not consistent. I guess that's really what I'm looking for. Yeah. So it just becomes very hard that even if we got it as a table might not, we might not know where to fit it because a lot of times it's not consistent.  that bit. And there But, you know, maybe we can work that out. So right now, the way we get it is, like, basically a text kind of box.  It's, we have the color coding, all that stuff. And what that triggers, once it's cleared, so we know that field that says, like, status, whether it's clear or not, we have a flow that basically says, okay, create this opportunity.  And it can trigger a notification to, like, somebody on the Favs team to say, hey, go fill out the rest of this information on that opportunity.  Because regardless, they need to go in there and fill out the dollar amounts and all the other opportunity-related details that you wouldn't get from the conflict check.  Right. Understood.
+
+17:45 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Okay. So I think, I don't want to take up unnecessary time, but I think that we should probably focus our time more on conflict check right now.  Because it seems like that's the point of contention for onboarding a new customer. Or a new matter for an existing customer, I think that's going to determine more where the data goes and the journey that that customer data takes rather than Salesforce.  It seems like the Salesforce stuff from what I'm hearing is mostly not automated, but it mostly flows pretty nicely.  Is that accurate? Yeah. I mean, it's pretty automated.
+
+18:22 - Melissa Caban
+  I mean, we can't know that opportunities are coming up, like yorence. Sometimes it's like, well, second, you put in this opportunity for me.  I don't know that because yorence is its own person. But where we can automate, we do automate. So, for example, if somebody wants to create an opportunity on an existing client, there's like a button they can press and it auto generates the opportunity.  So like there is automation on the Salesforce site. Awesome. Okay.
+
+18:54 - Yorence Ramiz (yorence.rafel@gmail.com)
+  So I think, I think we can stop here because I think that yorence and I need to circle back and then look at.  So checks more in depth and how we can connect Salesforce. The only question I would have remaining is like what API connectivity do we have or programmatic connectivity in any way, whether it's an API or an RPA or what have you.  How can we connect programmatically to Salesforce? Do we have any API ability there or do we have connectivity programmatically?
+
+19:23 - Melissa Caban
+  Yeah, mean, Adam could probably talk to us a little bit more, but I know Jason just and I recently just worked on an API connection for a program he set up.  So there are several ways that we can. It does exist. All right, sweet.
+
+19:43 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Okay, great.
+
+19:45 - Adam Daube
+  Yeah, please. Well, Greg, again, Greg is like the data godfather for Salesforce stuff. So like, I defer to his, you know, but as long as like, what I would say is if.  If we can weave in a service account, that would make security very happy. That's, you know, that's my one piece to add to this.  Yeah, no, 100%. I think anything that we do should be logged, service counted, you know, with credentials and, you know, rotating tokens.
+
+20:17 - Yorence Ramiz (yorence.rafel@gmail.com)
+  We're definitely making a shift now internally, at least as far as DevTech goes, as long as I have my way anyway, to get, you know, all this stuff like really shored up and like enterprise-grade security.  Our psychops is only two people, so I want us to be able to, for them to depend on us to secure our stuff.  And we're not like, you know, a laggard in that department and we're not like causing more work for them.  So absolutely agree with you. And I'm happy to hear that. We are all reading from the same sheet of music with regard to security.  But yeah, so thank you very much, guys. This was very illuminating. I think we need to go back and look at conflict checks a lot deeper and see how we can connect these two systems, remove any of those human.  You know, let's take information, you know, manual from another system and put it into the system, which is just context switching, which sucks, and then we can start to hit a stride with, you know, full value stream kind of automation, right?  Or maybe not full automation, but at least the movement of data and information happens without human intervention, right? Uh, whatever human evaluation or work that needs to happen before or at each phase, uh, can happen without the person having, you know, the cognitive load of, you know, where does this data go after and how do I move it, et cetera.  Um, so that's kind of our overarching goal and we welcome, you know, any recommendations or suggestions that you guys have for features or, you know, if something sucks in your life, like we're here to make it better.
+  ACTION ITEM: Send conflict check sandbox screenshots + matter-party structure/comparison to Yorence, Ariel - WATCH: https://fathom.video/share/wXoamX2SbbFu8yz9cncy5sAqP4L_AxVU?timestamp=1294.9999  So that's what I can say.
+
+21:45 - Melissa Caban
+  If you want, I can send you the structure of the matter parties that I was talking about. Kind of like do a comparison between what we get from ComboCheck and what matter parties looks like and maybe we can find some.
+
+22:01 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Yeah, can make an ELT or an ETL layer in between to transform that data into the way that you need it, right, and just keep all the data in a warehouse somewhere or in a bucket and then make sure that Salesforce gets the data that it needs in the format that it needs it and make sure that, you know, consumers of the data can consume it programmatically and we're not holding anybody up and we're accelerating, you know.  Yeah, and can we get some sort of sequence of screenshots of what you guys are looking at in your sandbox environment when you do pull a Salesforce, I mean, a conflict checks record?  Yeah, I'll do both and I'll kind of, I'll be very thorough.
+
+22:46 - Melissa Caban
+  I'm like, you know, this is a conflict check. This is a matter party. This is, you know, where we see some disconnects.  There are, there is a manual aspect of that, that if we can kind of leverage, that'd be fantastic. Fantastic.  Um.. And I'll explain even like, okay, this is a text field, there's a lookup field, like different details on why it may be complicated, or if you're able to just give that to us.
+
+23:12 - Adam Daube
+  Great. Awesome.
+
+23:14 - Yorence Ramiz (yorence.rafel@gmail.com)
+  Great. Well, thank you guys. was a pleasure meeting you. Thank you so much for your time. And I'm sure we'll be talking again very soon.  Likewise. Thank you. Bye.
