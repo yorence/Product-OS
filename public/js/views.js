@@ -142,25 +142,32 @@ function renderTopics() {
     }
   } catch(e) {}
 
-  // Show unlock screen
+  // Show unlock screen — but block if meetings are still loading
   stats.innerHTML = '';
+  const stillLoading = STATE.isLoading;
   container.innerHTML = `
     <div style="text-align:center;padding:4rem 2rem;max-width:480px;margin:0 auto">
       <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.3">&#128218;</div>
       <h3 style="font-family:var(--fd);font-weight:800;font-size:20px;color:var(--blue);margin-bottom:.5rem">Cross-Meeting Theme Analysis</h3>
-      <p style="font-size:15px;color:var(--text-light);line-height:1.6;margin-bottom:1.5rem">
-        This feature uses AI to synthesize themes and initiatives across your ${STATE.meetings.length} meetings.
-        Meeting summaries are sent to Perplexity's Sonar model to identify real work streams, not just keywords.
-        Each theme becomes a project with auto-generated briefs, roadmaps, and diagrams.
-      </p>
-      <div style="margin-bottom:1rem;text-align:left">
-        <label style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);display:block;margin-bottom:.4rem">Perplexity API Key</label>
-        <input type="password" id="perplexityKeyInput" placeholder="pplx-..." style="width:100%;padding:11px 14px;border:2px solid var(--gray-20);font-family:var(--fb);font-size:15px;color:var(--text)">
-        <div style="font-size:12px;color:var(--text-muted);margin-top:.3rem">Get a key at <strong>perplexity.ai/settings/api</strong></div>
-      </div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="unlockTopics()">
-        Unlock Theme Analysis
-      </button>
+      ${stillLoading ? `
+        <div style="padding:16px;background:#fff8ec;border-left:3px solid #f39c12;text-align:left;margin-bottom:1.5rem">
+          <div style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b45309;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span class="pulse-dot" style="width:8px;height:8px;border-radius:50%;background:#f39c12;animation:pulse 1s infinite"></span> Meetings still loading</div>
+          <div style="font-size:14px;color:var(--text-light);line-height:1.5">${STATE.meetings.length} meetings loaded so far. Please wait for all meetings to finish loading before analyzing themes — this ensures no discussions are missed.</div>
+        </div>
+      ` : `
+        <p style="font-size:15px;color:var(--text-light);line-height:1.6;margin-bottom:1.5rem">
+          Synthesize themes across your ${STATE.meetings.length} meetings using AI.
+          Each theme becomes a project with auto-generated briefs, roadmaps, and diagrams.
+        </p>
+        <div style="margin-bottom:1rem;text-align:left">
+          <label style="font-family:var(--fd);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);display:block;margin-bottom:.4rem">Perplexity API Key</label>
+          <input type="password" id="perplexityKeyInput" placeholder="pplx-..." style="width:100%;padding:11px 14px;border:2px solid var(--gray-20);font-family:var(--fb);font-size:15px;color:var(--text)">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:.3rem">Get a key at <strong>perplexity.ai/settings/api</strong></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="unlockTopics()">
+          Unlock Theme Analysis
+        </button>
+      `}
     </div>
   `;
 }
@@ -176,14 +183,56 @@ function renderTopicsGrid() {
     <div class="stat-card"><div class="label">Cross-Meeting</div><div class="value">${STATE.topics.filter(t=>t.videoCount>1).length}</div><div class="sub">Spanning 2+ meetings</div></div>
   `;
 
-  let html = '<div class="topics-grid">';
+  // Check if any themes have business value scores (from generated project docs)
+  const hasScores = STATE.topics.some(t => STATE.projectDocs?.[t.id]?.value?.score);
+
+  let html = '';
+
+  // Priority Matrix (shown if any scores exist)
+  if (hasScores) {
+    const scored = STATE.topics
+      .map(t => ({ ...t, bv: STATE.projectDocs?.[t.id]?.value || {} }))
+      .filter(t => t.bv.score)
+      .sort((a, b) => (b.bv.score || 0) - (a.bv.score || 0));
+
+    if (scored.length) {
+      html += `<div style="margin-bottom:2rem">
+        <h3 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--green-40)">Priority Matrix</h3>`;
+
+      scored.forEach((t, i) => {
+        const score = t.bv.score || 0;
+        const barColor = score >= 7 ? 'var(--green)' : score >= 4 ? '#f39c12' : 'var(--gray-40)';
+        const blockedBy = (t.bv.blocked_by || []);
+        const blocks = (t.bv.blocks || []);
+        html += `<div class="priority-row" onclick="showView('project-${t.id}')">
+          <div class="priority-rank">${i + 1}</div>
+          <div class="value-score ${score >= 7 ? 'value-high' : score >= 4 ? 'value-med' : 'value-low'}" style="width:36px;height:36px;font-size:16px">${score}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--blue);margin-bottom:2px">${esc(t.name)}</div>
+            <div class="priority-bar"><div class="priority-bar-fill" style="width:${score * 10}%;background:${barColor}"></div></div>
+            <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+              ${blockedBy.map(b => `<span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red);background:#fde8e8;padding:2px 6px">Blocked by: ${esc(b)}</span>`).join('')}
+              ${blocks.map(b => `<span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 6px">Enables: ${esc(b)}</span>`).join('')}
+            </div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  // Theme cards grid
+  html += '<div class="topics-grid">';
   STATE.topics.forEach(t => {
     const videoNames = t.videoIds.map(id => {
       const m = STATE.meetings.find(x => x.recording_id === id);
       return m ? (m.title || 'Untitled').substring(0, 30) : 'Unknown';
     });
+    const bv = STATE.projectDocs?.[t.id]?.value;
+    const scoreHtml = bv?.score ? `<span class="value-score ${bv.score >= 7 ? 'value-high' : bv.score >= 4 ? 'value-med' : 'value-low'}" style="width:28px;height:28px;font-size:13px;position:absolute;top:12px;right:12px">${bv.score}</span>` : '';
     html += `<div class="topic-card" onclick="showView('project-${t.id}')">
       <div class="topic-color" style="background:${t.color}"></div>
+      ${scoreHtml}
       <h3>${esc(t.name)}</h3>
       <div class="topic-meta">
         <span>${t.videoCount} meeting${t.videoCount!==1?'s':''}</span>

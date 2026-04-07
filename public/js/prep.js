@@ -91,3 +91,76 @@ function renderPrepArtifact(prep) {
 
   return html || '<div class="proj-artifact"><p style="color:var(--text-muted)">No prep data generated.</p></div>';
 }
+
+// ═══════ BUSINESS CASE RENDERER ═══════
+
+function renderBusinessCase(val) {
+  if (typeof val === 'string') return `<div class="proj-artifact">${simpleMarkdown(val)}</div>`;
+
+  let html = '';
+  const score = val.score || 0;
+  const scoreClass = score >= 7 ? 'value-high' : score >= 4 ? 'value-med' : 'value-low';
+
+  // Score + Impact header
+  html += `<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:1.5rem">
+    <div class="value-score ${scoreClass}">${score}</div>
+    <div style="flex:1">
+      <div style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:4px">Business Value Score</div>
+      <div style="font-size:15px;color:var(--text);line-height:1.6">${esc(val.score_rationale || '')}</div>
+    </div>
+  </div>`;
+
+  // Business Impact
+  if (val.business_impact) {
+    html += `<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--green-40)">Business Impact</h2>`;
+    html += `<p style="font-size:15px;line-height:1.65;color:var(--text);margin-bottom:1.5rem">${esc(val.business_impact)}</p>`;
+  }
+
+  // Research findings
+  if (val.research && val.research.length) {
+    html += `<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--green-40)">Supporting Research</h2>`;
+    val.research.forEach(r => {
+      html += `<div class="research-card">
+        <div class="research-source">${esc(r.source || 'Industry Research')}</div>
+        <div class="research-finding">${esc(r.finding || '')}</div>
+        ${r.relevance ? `<div style="font-size:13px;color:var(--text-light);margin-top:6px;font-style:italic">${esc(r.relevance)}</div>` : ''}
+        ${r.url ? `<div class="research-cite"><a href="${r.url}" target="_blank" rel="noopener">${esc(r.source || r.url)}</a></div>` : ''}
+      </div>`;
+    });
+  }
+
+  // ROI Estimate
+  if (val.roi_estimate) {
+    html += `<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:1.5rem 0 8px;padding-bottom:6px;border-bottom:2px solid var(--green-40)">ROI Estimate</h2>`;
+    html += `<div style="padding:14px 16px;background:var(--green-10);border-left:3px solid var(--green);font-size:15px;line-height:1.6;color:var(--text);margin-bottom:1.5rem">${esc(val.roi_estimate)}</div>`;
+  }
+
+  // Dependencies: blocks / blocked by
+  if ((val.blocks && val.blocks.length) || (val.blocked_by && val.blocked_by.length)) {
+    html += `<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green-text);margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--green-40)">Dependencies</h2>`;
+    if (val.blocked_by && val.blocked_by.length) {
+      val.blocked_by.forEach(b => {
+        html += `<div class="blocker-card">
+          <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--red);flex-shrink:0">Blocked by</div>
+          <div style="font-size:15px;color:var(--text)">${esc(b)}</div>
+        </div>`;
+      });
+    }
+    if (val.blocks && val.blocks.length) {
+      val.blocks.forEach(b => {
+        html += `<div class="blocker-card enables">
+          <div style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green-text);flex-shrink:0">Enables</div>
+          <div style="font-size:15px;color:var(--text)">${esc(b)}</div>
+        </div>`;
+      });
+    }
+  }
+
+  // Risks of inaction
+  if (val.risks_of_inaction) {
+    html += `<h2 style="font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin:1.5rem 0 8px;padding-bottom:6px;border-bottom:2px solid #f5c6c6">Risks of Inaction</h2>`;
+    html += `<div style="padding:14px 16px;background:#fde8e8;border-left:3px solid var(--red);font-size:15px;line-height:1.6;color:var(--text);margin-bottom:1rem">${esc(val.risks_of_inaction)}</div>`;
+  }
+
+  return html || '<div class="proj-artifact"><p style="color:var(--text-muted)">No business case generated.</p></div>';
+}

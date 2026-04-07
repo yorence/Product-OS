@@ -29,8 +29,8 @@ function renderProjectPage(topicId) {
   const overviewHtml = buildTopicOverviewHtml(t);
 
   // Build artifact tabs
-  const artifactTabs = ['prep', 'brief', 'roadmap', 'security', 'pipeline', 'process'];
-  const artifactLabels = { prep:'Meeting Prep', brief:'Product Brief', roadmap:'Roadmap', security:'Security', pipeline:'Data Pipeline', process:'Process' };
+  const artifactTabs = ['prep', 'value', 'brief', 'roadmap', 'security', 'pipeline', 'process'];
+  const artifactLabels = { prep:'Meeting Prep', value:'Business Case', brief:'Product Brief', roadmap:'Roadmap', security:'Security', pipeline:'Data Pipeline', process:'Process' };
 
   const tabButtons = `
     <div class="proj-tabs">
@@ -42,7 +42,7 @@ function renderProjectPage(topicId) {
 
   const artifactContent = artifactTabs.map(a => {
     const content = hasDocs && docs[a]
-      ? (a === 'prep' ? renderPrepArtifact(docs[a]) : `<div class="proj-artifact">${simpleMarkdown(docs[a])}</div>`)
+      ? (a === 'prep' ? renderPrepArtifact(docs[a]) : a === 'value' ? renderBusinessCase(docs[a]) : `<div class="proj-artifact">${simpleMarkdown(docs[a])}</div>`)
       : `<div class="proj-gen-banner">
           <h4>${artifactLabels[a]}</h4>
           <p>Generate AI-powered ${artifactLabels[a].toLowerCase()} for this initiative using meeting context.</p>
@@ -188,7 +188,23 @@ The prep value must be a JSON object (not a string) with this exact structure:
 IMPORTANT: For video_url fields, use the Fathom Video URLs provided in the transcript context above (they look like https://fathom.video/share/xxx?timestamp=123). Pick the URL closest to where that topic was discussed. Leave empty string if no relevant link.
 Be extremely specific. Use real names, real systems, real decisions from the transcripts.
 
-ARTIFACTS 2-6 — Standard project docs (brief, roadmap, security, pipeline, process).
+ARTIFACT 2 — "value" (Business Case — MUST BE STRUCTURED JSON, not markdown):
+The value assessment provides business justification backed by real research. You MUST use your web search capabilities to find relevant industry research, statistics, and best practices.
+{
+  "score": 8,
+  "score_rationale": "Why this score (1-10) based on business impact, urgency, and strategic alignment",
+  "business_impact": "2-3 sentences on how this initiative impacts revenue, efficiency, risk, or client satisfaction",
+  "research": [
+    { "finding": "Specific statistic or finding from industry research", "source": "Name of publication, firm, or study", "url": "URL to the source if available", "relevance": "How this applies to this initiative" }
+  ],
+  "roi_estimate": "Qualitative or quantitative ROI estimate based on the discussions and research",
+  "blocks": ["Names of OTHER themes from the list above that THIS theme blocks or is a prerequisite for"],
+  "blocked_by": ["Names of OTHER themes that must happen before this one can proceed"],
+  "risks_of_inaction": "What happens if this initiative is NOT pursued — specific consequences based on what was discussed"
+}
+IMPORTANT: Use your web search to find 2-4 real research findings (from Gartner, McKinsey, Deloitte, AICPA, accounting industry reports, etc.) that support the business value of this type of initiative. Be specific with statistics and citations.
+
+ARTIFACTS 3-7 — Standard project docs (brief, roadmap, security, pipeline, process).
 
 IMPORTANT — MERMAID DIAGRAM RULES (pipeline and process):
 - Use Mermaid diagram syntax inside a fenced code block marked with \`\`\`mermaid
@@ -221,6 +237,7 @@ graph LR
 RESPOND WITH VALID JSON ONLY (no markdown fences around the JSON itself):
 {
   "prep": { "emails": [...], "conversations": [...], "action_items": [...], "discussion_topics": [...], "suggested_attendees": [...] },
+  "value": { "score": 8, "score_rationale": "...", "business_impact": "...", "research": [...], "roi_estimate": "...", "blocks": [...], "blocked_by": [...], "risks_of_inaction": "..." },
   "brief": "## Problem\\n...\\n## Target User\\n...\\n## User Stories\\n...\\n## Success Metrics\\n...\\n## Risks\\n...",
   "roadmap": "## P0 — Must Do\\n...\\n## P1 — Should Do\\n...\\n## P2 — Nice to Have\\n...",
   "security": "## Security Considerations\\n(Reference the firm's WISP and Records Retention Policy provided above)\\n## Risks\\n...\\n## Compliance Requirements\\n...\\n## Recommendations\\n...",
@@ -232,7 +249,7 @@ Each markdown value should be a complete document. Be thorough but grounded in w
 IMPORTANT: In the markdown artifacts (brief, roadmap, security, pipeline, process), whenever you reference a specific point discussed in a meeting, include a citation link using this format: [See discussion](VIDEO_URL) where VIDEO_URL is the Fathom video link with timestamp from the transcript context above.`;
 
   // Show loading state in all artifact tabs
-  const loadLabels = { prep:'meeting prep', brief:'product brief', roadmap:'roadmap', security:'security eval', pipeline:'data pipeline', process:'process flow' };
+  const loadLabels = { prep:'meeting prep', value:'business case', brief:'product brief', roadmap:'roadmap', security:'security eval', pipeline:'data pipeline', process:'process flow' };
   const allTabs = ['prep', 'brief', 'roadmap', 'security', 'pipeline', 'process'];
   allTabs.forEach(a => {
     const el = document.getElementById(`ptab-${a}-${topicId}`);
