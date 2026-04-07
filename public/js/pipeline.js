@@ -283,6 +283,8 @@ function renderKanban() {
 
 let dagInstance = null;
 let dagResizeHandler = null;
+let dagHighlightedNodes = null; // Set of node IDs in the highlighted chain
+let dagHighlightedLinks = null; // Set of "srcId->tgtId" strings
 
 function renderPipelineDAG() {
   const container = document.getElementById('pipeline-dag-container');
@@ -362,22 +364,37 @@ function renderPipelineDAG() {
       .backgroundColor('#3c3c3c')
       .graphData({ nodes, links })
       .nodeLabel(n => `${n.name} (ICE: ${n.ice})`)
-      .nodeColor(n => n.color)
+      .nodeColor(n => {
+        if (!dagHighlightedNodes) return n.color;
+        return dagHighlightedNodes.has(n.id) ? n.color : 'rgba(100,100,100,.3)';
+      })
       .nodeVal(n => n.val)
       .linkDirectionalArrowLength(6)
       .linkDirectionalArrowRelPos(0.85)
       .linkColor(l => {
         const src = l.source?.id ?? l.source;
         const tgt = l.target?.id ?? l.target;
-        return cpSet.has(src + '->' + tgt) ? '#aed136' : 'rgba(255,255,255,.2)';
+        const key = src + '->' + tgt;
+        if (dagHighlightedLinks) {
+          return dagHighlightedLinks.has(key) ? '#aed136' : 'rgba(255,255,255,.05)';
+        }
+        return cpSet.has(key) ? '#aed136' : 'rgba(255,255,255,.2)';
       })
       .linkWidth(l => {
         const src = l.source?.id ?? l.source;
         const tgt = l.target?.id ?? l.target;
-        return cpSet.has(src + '->' + tgt) ? 3 : 1;
+        const key = src + '->' + tgt;
+        if (dagHighlightedLinks) {
+          return dagHighlightedLinks.has(key) ? 3 : 0.5;
+        }
+        return cpSet.has(key) ? 3 : 1;
       })
-      .onNodeClick(node => showDAGDetail(node))
+      .onNodeClick(node => {
+        highlightDAGChain(node.id, links);
+        showDAGDetail(node);
+      })
       .onBackgroundClick(() => {
+        clearDAGHighlight();
         const dp = document.getElementById('dag-detail');
         if (dp) dp.style.display = 'none';
       });
@@ -394,6 +411,58 @@ function renderPipelineDAG() {
     };
     window.addEventListener('resize', dagResizeHandler);
   });
+}
+
+function highlightDAGChain(nodeId, links) {
+  dagHighlightedNodes = new Set();
+  dagHighlightedLinks = new Set();
+
+  // Build adjacency in both directions for traversal
+  const forward = {};  // blocker -> [blocked]
+  const reverse = {};  // blocked -> [blocker]
+  links.forEach(l => {
+    const src = l.source?.id ?? l.source;
+    const tgt = l.target?.id ?? l.target;
+    if (!forward[src]) forward[src] = [];
+    forward[src].push(tgt);
+    if (!reverse[tgt]) reverse[tgt] = [];
+    reverse[tgt].push(src);
+  });
+
+  // Trace upstream (all blockers of this node, recursively)
+  const traceUp = (id, visited) => {
+    if (visited.has(id)) return;
+    visited.add(id);
+    dagHighlightedNodes.add(id);
+    (reverse[id] || []).forEach(parent => {
+      dagHighlightedLinks.add(parent + '->' + id);
+      traceUp(parent, visited);
+    });
+  };
+
+  // Trace downstream (all nodes this blocks, recursively)
+  const traceDown = (id, visited) => {
+    if (visited.has(id)) return;
+    visited.add(id);
+    dagHighlightedNodes.add(id);
+    (forward[id] || []).forEach(child => {
+      dagHighlightedLinks.add(id + '->' + child);
+      traceDown(child, visited);
+    });
+  };
+
+  dagHighlightedNodes.add(nodeId);
+  traceUp(nodeId, new Set());
+  traceDown(nodeId, new Set());
+
+  // Force re-render of node/link styles
+  if (dagInstance) dagInstance.nodeColor(dagInstance.nodeColor()).linkColor(dagInstance.linkColor()).linkWidth(dagInstance.linkWidth());
+}
+
+function clearDAGHighlight() {
+  dagHighlightedNodes = null;
+  dagHighlightedLinks = null;
+  if (dagInstance) dagInstance.nodeColor(dagInstance.nodeColor()).linkColor(dagInstance.linkColor()).linkWidth(dagInstance.linkWidth());
 }
 
 function showDAGDetail(node) {
