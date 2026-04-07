@@ -29,8 +29,8 @@ function renderProjectPage(topicId) {
   const overviewHtml = buildTopicOverviewHtml(t);
 
   // Build artifact tabs
-  const artifactTabs = ['prep', 'value', 'brief', 'roadmap', 'security', 'pipeline', 'process'];
-  const artifactLabels = { prep:'Meeting Prep', value:'Business Case', brief:'Product Brief', roadmap:'Roadmap', security:'Security', pipeline:'Data Pipeline', process:'Process' };
+  const artifactTabs = ['prep', 'value', 'brief', 'roadmap', 'security', 'pipeline', 'process', 'history'];
+  const artifactLabels = { prep:'Meeting Prep', value:'Business Case', brief:'Product Brief', roadmap:'Roadmap', security:'Security', pipeline:'Data Pipeline', process:'Process', history:'History' };
 
   const tabButtons = `
     <div class="proj-tabs">
@@ -41,6 +41,10 @@ function renderProjectPage(topicId) {
   const overviewTab = `<div class="proj-tab-content active" id="ptab-overview-${topicId}">${overviewHtml}</div>`;
 
   const artifactContent = artifactTabs.map(a => {
+    if (a === 'history') {
+      const histContent = typeof renderHistoryTabContent === 'function' ? renderHistoryTabContent(topicId) : '<div style="color:var(--text-muted);padding:2rem;text-align:center">History not available</div>';
+      return `<div class="proj-tab-content" id="ptab-${a}-${topicId}">${histContent}</div>`;
+    }
     const content = hasDocs && docs[a]
       ? (a === 'prep' ? renderPrepArtifact(docs[a]) : a === 'value' ? renderBusinessCase(docs[a]) : renderStructuredDoc(docs[a], artifactLabels[a]))
       : `<div class="proj-gen-banner">
@@ -69,6 +73,7 @@ function renderProjectPage(topicId) {
           return statusBadgeHtml(ps) + (canToggle && btnLabel ? ` <button class="btn btn-secondary btn-sm" onclick="toggleInitiativeStatus(${topicId},event)">${btnLabel}</button>` : '');
         })() : ''}
       </div>
+      ${typeof renderProvenanceBadge === 'function' ? renderProvenanceBadge(topicId) : ''}
     </div>
     ${tabButtons}
     ${overviewTab}
@@ -120,6 +125,12 @@ function buildTopicOverviewHtml(t) {
       </div>
     </div>`;
   });
+
+  // Meeting influence bars
+  if (typeof renderMeetingInfluence === 'function') {
+    html = renderMeetingInfluence(t.id) + html;
+  }
+
   return html;
 }
 
@@ -180,6 +191,7 @@ JSON only, no fences:
   if (!STATE.projectDocs[topicId]) STATE.projectDocs[topicId] = {};
   STATE.projectDocs[topicId].value = value;
   try { sessionStorage.setItem('project_docs', JSON.stringify(STATE.projectDocs)); } catch(e) {}
+  if (typeof saveVersion === 'function') saveVersion(topicId, STATE.projectDocs[topicId], 'value_only');
 }
 
 // Auto-score ALL unscored themes — triggered on first doc generation
@@ -379,6 +391,7 @@ IMPORTANT: In the markdown artifacts (brief, roadmap, security, pipeline, proces
 
     STATE.projectDocs[topicId] = docs;
     try { sessionStorage.setItem('project_docs', JSON.stringify(STATE.projectDocs)); } catch(e) {}
+    if (typeof saveVersion === 'function') saveVersion(topicId, docs, 'full');
 
     // Re-render the project page with the generated docs
     renderProjectPage(topicId);

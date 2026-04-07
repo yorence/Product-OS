@@ -366,6 +366,10 @@
   .callout.danger { background:#fde8e8; border-left-color:var(--red); }
   pre { background:var(--charcoal); color:rgba(255,255,255,.8); padding:1.5rem; overflow-x:auto; font-family:'Cascadia Code','Fira Code','Consolas',monospace; font-size:.78rem; line-height:1.5; margin:1rem 0; }
 
+  /* ── Version History ── */
+  .version-timeline { padding:0 0 1rem; }
+  .version-entry:hover { background:var(--bg); }
+
   /* ── Kanban Board ── */
   .kanban { display:grid; grid-template-columns:repeat(4,1fr); gap:2px; background:var(--gray-20); margin-bottom:2rem; }
   .kanban-col { background:var(--bg); min-height:200px; display:flex; flex-direction:column; }

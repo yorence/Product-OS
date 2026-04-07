@@ -348,7 +348,8 @@ function renderTopicsGrid() {
     <th class="sortable" onclick="sortThemes('confidence')" style="width:55px">Conf.${arrow('confidence')}</th>
     <th class="sortable" onclick="sortThemes('effort')" style="width:55px">Ease${arrow('effort')}</th>
     <th class="sortable" onclick="sortThemes('meetings')" style="width:55px">Mtgs${arrow('meetings')}</th>
-    <th style="width:150px">Dependencies</th>
+    <th style="width:130px">Blocked By</th>
+    <th style="width:130px">Enables</th>
   </tr></thead><tbody>`;
 
   catOrder.forEach(cat => {
@@ -376,7 +377,7 @@ function renderTopicsGrid() {
         </div>
       </td>
       <td style="text-align:center;font-family:var(--fd);font-weight:700;font-size:13px;color:var(--blue)">${catAvgIce ? catAvgIce.toFixed(1) : '—'}</td>
-      <td colspan="5"></td>
+      <td colspan="6"></td>
     </tr>`;
 
     if (collapsed) return;
@@ -392,24 +393,28 @@ function renderTopicsGrid() {
       const blocks = (bv.blocks || []);
       const readiness = computeStatus(t.id);
 
-      // Enhanced dependencies — clickable, resolved/unresolved
-      let depHtml = '';
+      // Blocked By column
+      let blockedByHtml = '';
       blockedBy.forEach(b => {
         const bt = findThemeByName(b);
         const resolved = bt && computeStatus(bt.id) === 'done';
         if (resolved) {
-          depHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 5px;display:inline-block;margin:1px;text-decoration:line-through;cursor:pointer" onclick="event.stopPropagation();showView('project-${bt.id}')">&#10003; ${esc(b)}</span>`;
+          blockedByHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 5px;display:inline-block;margin:1px;text-decoration:line-through;cursor:pointer" onclick="event.stopPropagation();showView('project-${bt.id}')">&#10003; ${esc(b)}</span>`;
         } else {
           const click = bt ? `onclick="event.stopPropagation();showView('project-${bt.id}')"` : '';
-          depHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);background:#fde8e8;padding:2px 5px;display:inline-block;margin:1px;${bt ? 'cursor:pointer' : ''}" ${click}>&#9888; ${esc(b)}</span>`;
+          blockedByHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);background:#fde8e8;padding:2px 5px;display:inline-block;margin:1px;${bt ? 'cursor:pointer' : ''}" ${click}>&#9888; ${esc(b)}</span>`;
         }
       });
+      if (!blockedByHtml) blockedByHtml = '<span style="color:var(--text-muted);font-size:12px">—</span>';
+
+      // Enables column
+      let enablesHtml = '';
       blocks.forEach(b => {
         const et = findThemeByName(b);
         const click = et ? `onclick="event.stopPropagation();showView('project-${et.id}')"` : '';
-        depHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 5px;display:inline-block;margin:1px;${et ? 'cursor:pointer' : ''}" ${click}>&#10132; ${esc(b)}</span>`;
+        enablesHtml += `<span style="font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green-text);background:var(--green-10);padding:2px 5px;display:inline-block;margin:1px;${et ? 'cursor:pointer' : ''}" ${click}>&#10132; ${esc(b)}</span>`;
       });
-      if (!depHtml) depHtml = '<span style="color:var(--text-muted);font-size:12px">—</span>';
+      if (!enablesHtml) enablesHtml = '<span style="color:var(--text-muted);font-size:12px">—</span>';
 
       const iceBadge = ice !== null
         ? `<span style="font-family:var(--fd);font-weight:800;font-size:15px;color:${ice >= 7 ? 'var(--green-text)' : ice >= 4 ? '#b45309' : 'var(--charcoal)'}">${ice}</span>`
@@ -427,7 +432,8 @@ function renderTopicsGrid() {
         <td style="text-align:center">${scoreBadgeFn(confidence)}</td>
         <td style="text-align:center">${scoreBadgeFn(effort)}</td>
         <td style="text-align:center;font-family:var(--fd);font-weight:700;font-size:14px;color:var(--charcoal)">${t.videoCount}</td>
-        <td>${depHtml}</td>
+        <td>${blockedByHtml}</td>
+        <td>${enablesHtml}</td>
       </tr>`;
     });
   });
