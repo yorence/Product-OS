@@ -283,6 +283,8 @@
 
   /* ── Mermaid Diagrams ── */
   .mermaid-container { background:white; border:1px solid var(--border); padding:1.5rem; margin:1rem 0; overflow-x:auto; box-shadow:var(--sh-sm); }
+  .graph-dir-item:hover { background:rgba(255,255,255,.06) !important; }
+
   .mermaid-container svg { max-width:100%; height:auto; }
   .mermaid { font-family:var(--fd) !important; }
   @keyframes spin { to{transform:rotate(360deg)} }
@@ -484,14 +486,18 @@
     <!-- 3D Knowledge Graph -->
     <div id="view-graph3d" class="view-panel hidden">
       <div id="graph3d-container" style="width:100%;height:calc(100vh - 120px);background:var(--charcoal);position:relative">
-        <div id="graph3d-legend" style="position:absolute;top:16px;left:16px;z-index:10;display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Theme</span></div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Person</span></div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="width:1px;height:12px;background:rgba(174,209,54,.6);display:inline-block;margin:0 5px"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)">Involved in theme</span></div>
-          <div style="display:flex;align-items:center;gap:8px"><span style="width:1px;height:12px;background:rgba(119,148,188,.4);display:inline-block;margin:0 5px"></span><span style="font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)">Co-involved</span></div>
+        <div id="graph3d-panel" style="position:absolute;top:12px;left:12px;bottom:12px;z-index:10;width:240px;display:flex;flex-direction:column;pointer-events:auto">
+          <!-- Legend -->
+          <div style="background:rgba(0,0,0,.6);padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:2px">
+            <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#aed136;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Theme</span></div>
+            <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;background:#ffffff;border-radius:50%;display:inline-block"></span><span style="font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Person</span></div>
+          </div>
+          <!-- Directory -->
+          <div id="graph3d-directory" style="background:rgba(0,0,0,.55);flex:1;overflow-y:auto;padding:0">
+          </div>
         </div>
-        <div id="graph3d-info" style="position:absolute;bottom:16px;left:16px;z-index:10;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.35)">Click a node to inspect. Drag to rotate. Scroll to zoom.</div>
-        <div id="graph3d-detail" style="position:absolute;top:16px;right:16px;z-index:10;max-width:300px;display:none"></div>
+        <div id="graph3d-info" style="position:absolute;bottom:12px;left:264px;z-index:10;font-family:var(--fb);font-size:13px;color:rgba(255,255,255,.3)">Click a node or list item to focus. Drag to rotate. Scroll to zoom.</div>
+        <div id="graph3d-detail" style="position:absolute;top:12px;right:12px;z-index:10;max-width:280px;display:none"></div>
       </div>
     </div>
 
@@ -1974,13 +1980,90 @@ function renderGraph3D() {
       graph3dInstance.d3Force('link').distance(l => {
         if (l.type === 'involves') {
           const str = l.strength || 1;
-          return 80 - Math.min(str * 3, 50); // stronger = shorter link
+          return 80 - Math.min(str * 3, 50);
         }
         return 100;
       });
+
+      populateGraphDirectory();
     } catch(e) {
       console.error('Graph3D init error:', e);
       container.querySelector('#graph3d-info').textContent = 'Error initializing 3D graph: ' + e.message;
+    }
+  });
+}
+
+function populateGraphDirectory() {
+  const dir = document.getElementById('graph3d-directory');
+  if (!dir || !graphData) return;
+
+  // Group: themes with their people
+  const themes = graphData.nodes.filter(n => n.type === 'theme');
+  const people = graphData.nodes.filter(n => n.type === 'person');
+
+  // Build a map of person -> themes
+  const personThemes = {};
+  people.forEach(p => { personThemes[p.id] = []; });
+  (graphData.links || []).forEach(l => {
+    const src = l.source?.id || l.source;
+    const tgt = l.target?.id || l.target;
+    if (l.type === 'involves' && typeof tgt === 'string' && tgt.startsWith('person-')) {
+      if (personThemes[tgt]) personThemes[tgt].push({ themeId: src, strength: l.strength || 1 });
+    }
+  });
+
+  let html = '';
+
+  // Themes section
+  html += `<div style="padding:8px 12px 4px;font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green);border-bottom:1px solid rgba(255,255,255,.06)">Themes</div>`;
+  themes.forEach(t => {
+    // Count people in this theme
+    const pCount = (graphData.links || []).filter(l => {
+      const src = l.source?.id || l.source;
+      return src === t.id && l.type === 'involves';
+    }).length;
+    html += `<div class="graph-dir-item" onclick="focusGraphNode('${t.id}')" style="cursor:pointer;padding:7px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.04);transition:background 150ms">
+      <span style="width:8px;height:8px;background:#aed136;border-radius:50%;flex-shrink:0"></span>
+      <span style="font-family:var(--fd);font-size:12px;font-weight:600;color:rgba(255,255,255,.75);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.name)}</span>
+      <span style="font-family:var(--fd);font-size:10px;font-weight:700;color:rgba(255,255,255,.25)">${pCount}</span>
+    </div>`;
+  });
+
+  // People section - sorted by number of themes (most connected first)
+  const sortedPeople = [...people].sort((a, b) => (personThemes[b.id]?.length || 0) - (personThemes[a.id]?.length || 0));
+  html += `<div style="padding:8px 12px 4px;margin-top:4px;font-family:var(--fd);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.45);border-bottom:1px solid rgba(255,255,255,.06)">People</div>`;
+  sortedPeople.forEach(p => {
+    const themeCount = personThemes[p.id]?.length || 0;
+    const themeNames = personThemes[p.id]?.map(pt => {
+      const tNode = graphData.nodes.find(n => n.id === pt.themeId);
+      return tNode?.name || '';
+    }).filter(Boolean) || [];
+    html += `<div class="graph-dir-item" onclick="focusGraphNode('${p.id}')" style="cursor:pointer;padding:7px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.04);transition:background 150ms">
+      <span style="width:8px;height:8px;background:rgba(255,255,255,.7);border-radius:50%;flex-shrink:0"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--fd);font-size:12px;font-weight:600;color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</div>
+        ${themeNames.length ? `<div style="font-size:10px;color:rgba(174,209,54,.5);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(themeNames.join(' · '))}</div>` : ''}
+      </div>
+      <span style="font-family:var(--fd);font-size:10px;font-weight:700;color:rgba(255,255,255,.2)">${themeCount}</span>
+    </div>`;
+  });
+
+  dir.innerHTML = html;
+}
+
+function focusGraphNode(nodeId) {
+  if (!graphData || !graph3dInstance) return;
+  const node = graphData.nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  showGraphDetail(node);
+  highlightConnected(node);
+
+  // Highlight the active directory item
+  document.querySelectorAll('.graph-dir-item').forEach(el => el.style.background = '');
+  // Find and highlight the clicked one
+  document.querySelectorAll('.graph-dir-item').forEach(el => {
+    if (el.getAttribute('onclick')?.includes(nodeId)) {
+      el.style.background = 'rgba(174,209,54,.12)';
     }
   });
 }
